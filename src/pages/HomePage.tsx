@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, GitFork, Eye, TrendingUp, Sparkles, Clock, Flame, Tag } from 'lucide-react'
-import { getPublishedArticles, getSortedArticles, type SortMode, type PublishedArticle } from '@/lib/articles'
+import { ArrowRight, GitFork, Eye, Sparkles, Clock, Flame, Tag } from 'lucide-react'
+import { getSortedArticles, type SortMode, type PublishedArticle } from '@/lib/articles'
 
 export function HomePage() {
   return (
