@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Core palette - Magazine editorial */
+    --background: 40 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 14%;
+    --primary-foreground: 40 20% 98%;
+    --secondary: 40 15% 94%;
+    --secondary-foreground: 222 47% 14%;
+    --muted: 40 10% 93%;
+    --muted-foreground: 222 10% 45%;
+    --accent: 40 15% 94%;
+    --accent-foreground: 222 47% 14%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 222 47% 14%;
+    --radius: 0.625rem;
+
+    /* Brand colors */
+    --gold: 40 90% 52%;
+    --gold-light: 42 95% 65%;
+    --gold-dark: 38 85% 42%;
+    --navy: 222 47% 14%;
+    --navy-light: 222 35% 25%;
+    --navy-deep: 222 55% 8%;
+
+    /* Branch type colors */
+    --branch-refute: 0 72% 55%;
+    --branch-supplement: 215 80% 55%;
+    --branch-extend: 152 60% 42%;
+    --branch-example: 270 55% 55%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(222 47% 14%) 0%, hsl(222 35% 25%) 50%, hsl(270 30% 20%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(40 90% 52%) 0%, hsl(42 95% 65%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(40 20% 97%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(40 20% 98%) 0%, hsl(40 15% 95%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px hsl(222 47% 14% / 0.04), 0 1px 2px hsl(222 47% 14% / 0.06);
+    --shadow-md: 0 4px 12px hsl(222 47% 14% / 0.06), 0 2px 4px hsl(222 47% 14% / 0.04);
+    --shadow-lg: 0 12px 40px hsl(222 47% 14% / 0.08), 0 4px 12px hsl(222 47% 14% / 0.04);
+    --shadow-xl: 0 20px 60px hsl(222 47% 14% / 0.12), 0 8px 20px hsl(222 47% 14% / 0.06);
+    --shadow-gold: 0 4px 20px hsl(40 90% 52% / 0.25);
+
+    /* Transitions */
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-serif tracking-tight;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+@layer components {
+  /* Magazine pull quote */
+  .pull-quote {
+    @apply relative pl-6 border-l-[3px] border-gold italic font-serif text-xl leading-relaxed;
+    @apply text-foreground/80;
+  }
+
+  .pull-quote::before {
+    content: '\201C';
+    @apply absolute -left-1 -top-4 text-6xl text-gold/40 font-serif;
+  }
+
+  /* Section divider */
+  .section-divider {
+    @apply relative flex items-center justify-center my-12;
+  }
+
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    @apply flex-1 h-px bg-border;
+  }
+
+  .section-divider::before {
+    @apply mr-4;
+  }
+
+  .section-divider::after {
+    @apply ml-4;
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    transition: var(--transition-smooth);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-hover:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  /* Branch indicator dots */
+  .branch-dot {
+    @apply w-2.5 h-2.5 rounded-full ring-2 ring-background;
+  }
+
+  /* Gold accent underline */
+  .gold-underline {
+    @apply relative inline-block;
+  }
+
+  .gold-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-full h-[2px] bg-gold/60;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.3s ease;
+  }
+
+  .gold-underline:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  /* Magazine header line */
+  .mag-header {
+    @apply relative pb-4;
+  }
+
+  .mag-header::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-16 h-0.5 bg-gold;
+  }
+
+  /* Typing animation */
+  .typing-dot {
+    @apply w-2 h-2 rounded-full bg-gold animate-pulse-soft;
+  }
+
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

@@ -1,0 +1,182 @@
+import { Router, Response } from 'express'
+import { generateArticleFromChat, type ChatMessage } from '../lib/openai.js'
+import { requireAuth, optionalAuth, type AuthenticatedRequest } from '../middleware/auth.js'
+import { supabaseAdmin } from '../lib/supabase.js'
+import { submitImageTask } from '../lib/midjourney.js'
+
+export const articleRouter = Router()
+
+/**
+ * POST /api/articles/generate
+ * Generate a magazine article from a conversation
+ */
+articleRouter.post('/generate', optionalAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const { interviewId, messages, templateStyle } = req.body
+
+  if (!messages || !Array.isArray(messages)) {
+    res.status(400).json({ error: 'Messages array is required' })
+    return
+  }
+
+  try {
+    // Generate article using LLM
+    const chatMessages: ChatMessage[] = messages.map((m: { role: string; content: string }) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }))
+
+    const article = await generateArticleFromChat(chatMessages, templateStyle || 'deep')
+
+    // Generate images for each section (non-blocking)
+    const imagePromises = article.sections.map(async (section) => {
+      const result = await submitImageTask(section.imagePrompt)
+      return { ...section, imageTaskId: result.taskId, imageUrl: result.imageUrl }
+    })
+
+    const sectionsWithImages = await Promise.all(imagePromises)
+
+    // Save to database if interviewId provided and user is authenticated
+    if (interviewId && req.userId) {
+      // Update interview with generated article data
+      await supabaseAdmin
+        .from('interviews')
+        .update({
+          title: article.title,
+          subtitle: article.subtitle,
+          summary: article.summary,
+          template_style: templateStyle || 'deep',
+          status: 'generated',
+        })
+        .eq('id', interviewId)
+
+      // Save sections
+      for (let i = 0; i < sectionsWithImages.length; i++) {
+        const section = sectionsWithImages[i]
+        await supabaseAdmin.from('sections').insert({
+          interview_id: interviewId,
+          order_index: i,
+          title: section.title,
+          content: section.content,
+          key_quote: section.keyQuote || null,
+          image_prompt: section.imagePrompt,
+          image_url: section.imageUrl || null,
+          image_task_id: section.imageTaskId,
+        })
+      }
+    }
+
+    res.json({
+      article: {
+        title: article.title,
+        subtitle: article.subtitle,
+        summary: article.summary,
+        sections: sectionsWithImages,
+      }
+    })
+  } catch (error: any) {
+    const status = error?.status || error?.response?.status
+    if (status === 429) {
+      res.status(429).json({ error: 'AI 服务暂时繁忙，请等待 30 秒后重试', retryable: true })
+      return
+    }
+    const message = error instanceof Error ? error.message : 'Generation failed'
+    res.status(500).json({ error: 'Article generation failed', details: message })
+  }
+})
+
+/**
+ * POST /api/articles/:id/publish
+ * Publish a generated article
+ */
+articleRouter.post('/:id/publish', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params
+
+  const { data, error } = await supabaseAdmin
+    .from('interviews')
+    .update({ status: 'published', published_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('creator_id', req.userId)
+    .select()
+    .single()
+
+  if (error) {
+    res.status(404).json({ error: 'Article not found or not authorized' })
+    return
+  }
+
+  res.json(data)
+})
+
+/**
+ * GET /api/articles/:id
+ * Get a published article with its sections and branches
+ */
+articleRouter.get('/:id', async (req, res) => {
+  const { id } = req.params
+
+  // Fetch interview
+  const { data: interview, error } = await supabaseAdmin
+    .from('interviews')
+    .select(`
+      *,
+      profiles:creator_id (id, name, title, avatar_url),
+      sections (
+        *,
+        branches (
+          *,
+          profiles:creator_id (id, name, title, avatar_url)
+        )
+      )
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error || !interview) {
+    res.status(404).json({ error: 'Article not found' })
+    return
+  }
+
+  // Increment read count
+  await supabaseAdmin.rpc('increment_read_count', { interview_id: id })
+
+  res.json(interview)
+})
+
+/**
+ * GET /api/articles
+ * List published articles (with pagination)
+ */
+articleRouter.get('/', async (req, res) => {
+  const { page = '1', limit = '10', topic_id } = req.query
+  const offset = (Number(page) - 1) * Number(limit)
+
+  let query = supabaseAdmin
+    .from('interviews')
+    .select(`
+      id, title, subtitle, summary, template_style, tags,
+      cover_gradient, read_count, branch_count,
+      created_at, published_at,
+      profiles:creator_id (id, name, title, avatar_url)
+    `, { count: 'exact' })
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .range(offset, offset + Number(limit) - 1)
+
+  if (topic_id) {
+    query = query.eq('topic_id', topic_id)
+  }
+
+  const { data, error, count } = await query
+
+  if (error) {
+    res.status(500).json({ error: error.message })
+    return
+  }
+
+  res.json({
+    articles: data,
+    total: count,
+    page: Number(page),
+    limit: Number(limit),
+  })
+})
