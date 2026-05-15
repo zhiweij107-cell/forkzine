@@ -180,3 +180,60 @@ articleRouter.get('/', async (req, res) => {
     limit: Number(limit),
   })
 })
+
+/**
+ * POST /api/articles/publish-direct
+ * Create and publish an article directly (one-step publish)
+ * For cases where the article was generated without an interviewId
+ */
+articleRouter.post('/publish-direct', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const { title, subtitle, summary, sections, templateStyle, topicTitle, tags } = req.body
+
+  if (!title || !sections || !Array.isArray(sections)) {
+    res.status(400).json({ error: 'title and sections are required' })
+    return
+  }
+
+  try {
+    // Create interview record
+    const { data: interview, error: interviewError } = await supabaseAdmin
+      .from('interviews')
+      .insert({
+        creator_id: req.userId,
+        topic_title: topicTitle || '自由对话',
+        title,
+        subtitle: subtitle || '',
+        summary: summary || '',
+        template_style: templateStyle || 'deep',
+        tags: tags || [],
+        status: 'published',
+        published_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (interviewError || !interview) {
+      res.status(500).json({ error: 'Failed to create article', details: interviewError?.message })
+      return
+    }
+
+    // Save sections
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i]
+      await supabaseAdmin.from('sections').insert({
+        interview_id: interview.id,
+        order_index: i,
+        title: section.title || `章节 ${i + 1}`,
+        content: section.content || '',
+        key_quote: section.keyQuote || null,
+        image_prompt: section.imagePrompt || null,
+        image_url: section.imageUrl || null,
+      })
+    }
+
+    res.json({ id: interview.id, status: 'published' })
+  } catch (error: any) {
+    const message = error instanceof Error ? error.message : 'Publish failed'
+    res.status(500).json({ error: message })
+  }
+})

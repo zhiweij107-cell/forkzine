@@ -5,7 +5,7 @@ import {
   ArrowLeft, BookOpen, Wand2, RefreshCw, Check,
   Image, Palette, Type, AlertCircle
 } from 'lucide-react'
-import { publishArticle as publishToAPI } from '@/lib/api'
+import { publishArticle as publishToAPI, publishArticleDirect } from '@/lib/api'
 
 interface GeneratedSection {
   title: string
@@ -151,12 +151,24 @@ export function GeneratePage() {
 
           {step === 'preview' && (
             <Button variant="gold" size="sm" className="gap-2" onClick={async () => {
-              if (interviewId) {
-                try {
+              try {
+                if (interviewId) {
                   await publishToAPI(interviewId)
-                } catch (e) {
-                  console.error('Publish failed:', e)
+                } else if (article) {
+                  await publishArticleDirect({
+                    title: article.title,
+                    subtitle: article.subtitle,
+                    summary: article.summary,
+                    sections: article.sections,
+                    templateStyle: selectedTemplate,
+                    topicTitle: topicTitle || '自由对话',
+                    tags: [topicTitle || '自由对话', selectedTemplate === 'deep' ? '深度访谈' : selectedTemplate === 'light' ? '轻松漫谈' : '观点碰撞'],
+                  })
                 }
+              } catch (e) {
+                console.error('Publish failed:', e)
+                alert('发布失败，请确保已登录后重试')
+                return
               }
               navigate('/')
             }}>

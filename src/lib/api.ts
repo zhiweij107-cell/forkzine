@@ -167,6 +167,24 @@ export async function publishArticle(articleId: string) {
   return data
 }
 
+export async function publishArticleDirect(article: {
+  title: string
+  subtitle: string
+  summary: string
+  sections: { title: string; content: string; keyQuote?: string; imagePrompt?: string; imageUrl?: string }[]
+  templateStyle: string
+  topicTitle: string
+  tags: string[]
+}) {
+  const res = await apiFetch('/articles/publish-direct', {
+    method: 'POST',
+    body: JSON.stringify(article),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error)
+  return data
+}
+
 export async function getArticle(articleId: string) {
   const res = await apiFetch(`/articles/${articleId}`)
   const data = await res.json()
