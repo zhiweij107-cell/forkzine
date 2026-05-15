@@ -110,11 +110,16 @@ export function ArticlePage() {
                   <img src={section.image_url} alt={section.title} className="w-full" />
                 </div>
               ) : section.image_prompt ? (
-                <div className="mt-8 aspect-[21/9] rounded-lg bg-gradient-to-r from-slate-800 via-indigo-900 to-slate-900 flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.3))]" />
-                  <span className="text-primary-foreground/30 text-sm font-medium relative z-10">
-                    {section.image_prompt}
-                  </span>
+                <div className="mt-8 aspect-[21/9] rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 flex items-center justify-center relative overflow-hidden border border-white/5">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.08),transparent_70%)]" />
+                  <div className="relative z-10 text-center px-8 max-w-lg">
+                    <p className="text-primary-foreground/60 text-sm leading-relaxed italic">
+                      {section.image_prompt}
+                    </p>
+                    <span className="inline-block mt-3 text-[10px] text-primary-foreground/30 border border-primary-foreground/10 rounded-full px-2 py-0.5">
+                      AI 配图构想
+                    </span>
+                  </div>
                 </div>
               ) : null}
             </section>

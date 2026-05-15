@@ -332,16 +332,16 @@ export function GeneratePage() {
                     <p className="text-sm text-foreground/70 leading-relaxed whitespace-pre-wrap">
                       {section.content}
                     </p>
-                    <div className="mt-4 aspect-[16/5] rounded-lg bg-gradient-to-r from-slate-800 via-indigo-900 to-slate-900 flex items-center justify-center">
-                      <div className="text-center">
-                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-xs text-primary-foreground/70 transition-colors">
-                          <Image className="w-3.5 h-3.5" /> 生成配图
-                        </button>
+                    <div className="mt-4 aspect-[16/5] rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 flex items-center justify-center border border-white/5">
+                      <div className="text-center px-6 max-w-md">
                         {section.imagePrompt && (
-                          <p className="mt-2 text-[10px] text-primary-foreground/40 max-w-xs">
+                          <p className="text-xs text-primary-foreground/60 italic leading-relaxed">
                             {section.imagePrompt}
                           </p>
                         )}
+                        <span className="inline-block mt-2 text-[10px] text-primary-foreground/30 border border-primary-foreground/10 rounded-full px-2 py-0.5">
+                          AI 配图构想
+                        </span>
                       </div>
                     </div>
                   </div>
