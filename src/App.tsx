@@ -6,6 +6,8 @@ import { ChatPage } from '@/pages/ChatPage'
 import { AuthPage } from '@/pages/AuthPage'
 import { GeneratePage } from '@/pages/GeneratePage'
 import { HistoryPage } from '@/pages/HistoryPage'
+import { ExplorePage } from '@/pages/ExplorePage'
+import { TrendingPage } from '@/pages/TrendingPage'
 
 function App() {
   return (
@@ -15,6 +17,8 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/article/:id" element={<ArticlePage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/trending" element={<TrendingPage />} />
         </Route>
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/auth" element={<AuthPage />} />

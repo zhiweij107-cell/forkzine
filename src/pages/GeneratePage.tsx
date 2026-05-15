@@ -5,8 +5,7 @@ import {
   ArrowLeft, BookOpen, Wand2, RefreshCw, Check,
   Image, Palette, Type, AlertCircle
 } from 'lucide-react'
-import { publishArticle } from '@/lib/articles'
-import { getCurrentUser } from '@/lib/api'
+import { publishArticle as publishToAPI } from '@/lib/api'
 
 interface GeneratedSection {
   title: string
@@ -38,6 +37,7 @@ export function GeneratePage() {
   const [step, setStep] = useState<'template' | 'generating' | 'preview' | 'error'>('template')
   const [selectedTemplate, setSelectedTemplate] = useState('deep')
   const [article, setArticle] = useState<GeneratedArticle | null>(null)
+  const [interviewId, setInterviewId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [retryable, setRetryable] = useState(false)
   const [retryCountdown, setRetryCountdown] = useState(0)
@@ -67,6 +67,25 @@ export function GeneratePage() {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
 
+      // Start an interview first if authenticated
+      let currentInterviewId = interviewId
+      if (token && !currentInterviewId) {
+        try {
+          const startRes = await fetch(`${API_BASE}/chat/start`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ topicTitle: topicTitle || '自由对话' }),
+          })
+          if (startRes.ok) {
+            const startData = await startRes.json()
+            currentInterviewId = startData.interviewId
+            setInterviewId(currentInterviewId)
+          }
+        } catch {
+          // Continue without interviewId - article won't be saved to DB
+        }
+      }
+
       const res = await fetch(`${API_BASE}/articles/generate`, {
         method: 'POST',
         headers,
@@ -74,6 +93,7 @@ export function GeneratePage() {
           messages,
           templateStyle: selectedTemplate,
           topicTitle,
+          interviewId: currentInterviewId,
         }),
       })
 
@@ -130,19 +150,13 @@ export function GeneratePage() {
           </div>
 
           {step === 'preview' && (
-            <Button variant="gold" size="sm" className="gap-2" onClick={() => {
-              if (article) {
-                const user = getCurrentUser()
-                publishArticle({
-                  title: article.title,
-                  subtitle: article.subtitle,
-                  summary: article.summary,
-                  topicTitle: topicTitle || '自由对话',
-                  sections: article.sections,
-                  author: { name: user?.name || '匿名创作者', email: user?.email },
-                  templateStyle: selectedTemplate,
-                  tags: [topicTitle || '自由对话', selectedTemplate === 'deep' ? '深度访谈' : selectedTemplate === 'light' ? '轻松漫谈' : '观点碰撞'],
-                })
+            <Button variant="gold" size="sm" className="gap-2" onClick={async () => {
+              if (interviewId) {
+                try {
+                  await publishToAPI(interviewId)
+                } catch (e) {
+                  console.error('Publish failed:', e)
+                }
               }
               navigate('/')
             }}>
