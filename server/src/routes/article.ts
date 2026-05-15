@@ -203,10 +203,13 @@ articleRouter.post('/publish-direct', requireAuth, async (req: AuthenticatedRequ
       .single()
 
     if (!existingProfile) {
-      // Create profile
+      // Only create profile if it doesn't exist - use user metadata for name
+      const { data: { user: authUser } } = await supabaseAdmin.auth.getUser(
+        req.headers.authorization!.slice(7)
+      )
       await supabaseAdmin.from('profiles').insert({
         id: req.userId,
-        name: req.userEmail?.split('@')[0] || '用户',
+        name: authUser?.user_metadata?.name || req.userEmail?.split('@')[0] || '用户',
         email: req.userEmail,
       })
     }
