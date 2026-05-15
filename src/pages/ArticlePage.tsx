@@ -1,31 +1,56 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { getArticleById, incrementReadCount, type PublishedArticle } from '@/lib/articles'
+import { getArticle } from '@/lib/api'
 import {
   ArrowLeft, GitFork, Eye, Heart, Share2, Bookmark,
-  MessageSquarePlus, AlertCircle
+  MessageSquarePlus, AlertCircle, Loader2
 } from 'lucide-react'
+
+interface ArticleData {
+  id: string
+  title: string
+  subtitle: string
+  summary: string
+  template_style: string
+  tags: string[]
+  read_count: number
+  branch_count: number
+  published_at: string
+  profiles: { id: string; name: string; title?: string; avatar_url?: string }
+  sections: { id: string; title: string; content: string; key_quote?: string; image_prompt?: string; image_url?: string; order_index: number }[]
+}
 
 export function ArticlePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [article, setArticle] = useState<PublishedArticle | null>(null)
+  const [article, setArticle] = useState<ArticleData | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!id) {
       setNotFound(true)
+      setLoading(false)
       return
     }
-    const found = getArticleById(id)
-    if (found) {
-      setArticle(found)
-      incrementReadCount(id)
-    } else {
-      setNotFound(true)
-    }
+    getArticle(id)
+      .then(data => {
+        setArticle(data)
+      })
+      .catch(() => {
+        setNotFound(true)
+      })
+      .finally(() => setLoading(false))
   }, [id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-gold" />
+      </div>
+    )
+  }
 
   if (notFound) {
     return (
@@ -58,15 +83,17 @@ export function ArticlePage() {
           </div>
 
           {/* Sections */}
-          {article.sections.map((section, idx) => (
-            <section key={idx} className="mb-16 animate-fade-in" style={{ animationDelay: `${idx * 0.1}s` }}>
+          {article.sections
+            .sort((a, b) => a.order_index - b.order_index)
+            .map((section, idx) => (
+            <section key={section.id || idx} className="mb-16 animate-fade-in" style={{ animationDelay: `${idx * 0.1}s` }}>
               {/* Section header */}
               <h2 className="text-2xl font-serif font-bold mag-header mb-6">{section.title}</h2>
 
               {/* Key quote */}
-              {section.keyQuote && (
+              {section.key_quote && (
                 <blockquote className="pull-quote my-8">
-                  {section.keyQuote}
+                  {section.key_quote}
                 </blockquote>
               )}
 
@@ -77,15 +104,19 @@ export function ArticlePage() {
                 </p>
               </div>
 
-              {/* Section image placeholder */}
-              {section.imagePrompt && (
+              {/* Section image */}
+              {section.image_url ? (
+                <div className="mt-8 rounded-lg overflow-hidden">
+                  <img src={section.image_url} alt={section.title} className="w-full" />
+                </div>
+              ) : section.image_prompt ? (
                 <div className="mt-8 aspect-[21/9] rounded-lg bg-gradient-to-r from-slate-800 via-indigo-900 to-slate-900 flex items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.3))]" />
                   <span className="text-primary-foreground/30 text-sm font-medium relative z-10">
-                    {section.imagePrompt}
+                    {section.image_prompt}
                   </span>
                 </div>
-              )}
+              ) : null}
             </section>
           ))}
 
@@ -119,7 +150,7 @@ export function ArticlePage() {
   )
 }
 
-function ArticleCover({ article }: { article: PublishedArticle }) {
+function ArticleCover({ article }: { article: ArticleData }) {
   const gradients = [
     'from-navy via-navy-light to-purple-900',
     'from-slate-900 via-indigo-900 to-slate-800',
@@ -131,6 +162,8 @@ function ArticleCover({ article }: { article: PublishedArticle }) {
     const date = new Date(dateStr)
     return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
   }
+
+  const authorName = article.profiles?.name || '匿名'
 
   return (
     <div className={`relative min-h-[50vh] flex items-end bg-gradient-to-br ${gradient}`}>
@@ -168,21 +201,21 @@ function ArticleCover({ article }: { article: PublishedArticle }) {
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
               <span className="text-sm font-medium text-primary-foreground">
-                {article.author.name[0]}
+                {authorName[0]}
               </span>
             </div>
             <div>
-              <div className="text-sm font-medium text-primary-foreground">{article.author.name}</div>
-              <div className="text-xs text-primary-foreground/50">{article.templateStyle === 'deep' ? '深度访谈' : article.templateStyle === 'light' ? '轻松漫谈' : '观点碰撞'}</div>
+              <div className="text-sm font-medium text-primary-foreground">{authorName}</div>
+              <div className="text-xs text-primary-foreground/50">{article.template_style === 'deep' ? '深度访谈' : article.template_style === 'light' ? '轻松漫谈' : '观点碰撞'}</div>
             </div>
             <div className="ml-auto flex items-center gap-4 text-xs text-primary-foreground/50">
               <span className="flex items-center gap-1">
-                <Eye className="w-3.5 h-3.5" /> {article.readCount}
+                <Eye className="w-3.5 h-3.5" /> {article.read_count}
               </span>
               <span className="flex items-center gap-1">
-                <GitFork className="w-3.5 h-3.5" /> {article.branchCount} 分支
+                <GitFork className="w-3.5 h-3.5" /> {article.branch_count} 分支
               </span>
-              <span>{formatDate(article.publishedAt)}</span>
+              {article.published_at && <span>{formatDate(article.published_at)}</span>}
             </div>
           </div>
         </div>

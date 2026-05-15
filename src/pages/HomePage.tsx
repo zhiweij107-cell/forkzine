@@ -1,8 +1,23 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, GitFork, Eye, Sparkles, Clock, Flame, Tag } from 'lucide-react'
-import { getSortedArticles, type SortMode, type PublishedArticle } from '@/lib/articles'
+import { ArrowRight, GitFork, Eye, Sparkles, Clock, Flame, Tag, Loader2 } from 'lucide-react'
+import { listArticles } from '@/lib/api'
+
+interface ArticleItem {
+  id: string
+  title: string
+  subtitle: string
+  summary: string
+  template_style: string
+  tags: string[]
+  read_count: number
+  branch_count: number
+  published_at: string
+  profiles: { id: string; name: string; title?: string; avatar_url?: string }
+}
+
+type SortMode = 'latest' | 'popular' | 'topic'
 
 export function HomePage() {
   return (
@@ -56,8 +71,31 @@ function HeroSection() {
 
 function ArticleFeed() {
   const [sort, setSort] = useState<SortMode>('latest')
-  const articles = getSortedArticles(sort)
+  const [articles, setArticles] = useState<ArticleItem[]>([])
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    listArticles(1, 20)
+      .then(data => {
+        setArticles(data.articles || [])
+      })
+      .catch(() => {
+        setArticles([])
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const sortedArticles = [...articles].sort((a, b) => {
+    switch (sort) {
+      case 'popular':
+        return b.read_count - a.read_count
+      case 'topic':
+        return (a.tags[0] || '').localeCompare(b.tags[0] || '')
+      default:
+        return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+    }
+  })
 
   const sortOptions: { key: SortMode; label: string; icon: React.ReactNode }[] = [
     { key: 'latest', label: '最新发布', icon: <Clock className="w-3.5 h-3.5" /> },
@@ -73,7 +111,7 @@ function ArticleFeed() {
           <div className="flex items-center gap-3">
             <div className="w-1 h-6 bg-gold rounded-full" />
             <h2 className="text-2xl font-serif font-bold">访谈文章</h2>
-            <span className="text-sm text-muted-foreground">({articles.length})</span>
+            <span className="text-sm text-muted-foreground">({sortedArticles.length})</span>
           </div>
 
           <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary">
@@ -95,7 +133,11 @@ function ArticleFeed() {
         </div>
 
         {/* Articles list */}
-        {articles.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-gold" />
+          </div>
+        ) : sortedArticles.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center">
               <Sparkles className="w-7 h-7 text-gold/50" />
@@ -113,7 +155,7 @@ function ArticleFeed() {
           </div>
         ) : (
           <div className="space-y-6">
-            {articles.map(article => (
+            {sortedArticles.map(article => (
               <ArticleCard
                 key={article.id}
                 article={article}
@@ -127,7 +169,7 @@ function ArticleFeed() {
   )
 }
 
-function ArticleCard({ article, onClick }: { article: PublishedArticle; onClick: () => void }) {
+function ArticleCard({ article, onClick }: { article: ArticleItem; onClick: () => void }) {
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr)
     const now = new Date()
@@ -143,6 +185,8 @@ function ArticleCard({ article, onClick }: { article: PublishedArticle; onClick:
     return date.toLocaleDateString('zh-CN')
   }
 
+  const authorName = article.profiles?.name || '匿名'
+
   return (
     <div
       onClick={onClick}
@@ -154,12 +198,12 @@ function ArticleCard({ article, onClick }: { article: PublishedArticle; onClick:
           <div className="flex items-center gap-3 mb-3">
             <div className="w-7 h-7 rounded-full bg-gold/20 border border-gold/30 flex items-center justify-center">
               <span className="text-xs font-medium text-gold">
-                {article.author.name[0]}
+                {authorName[0]}
               </span>
             </div>
-            <span className="text-sm text-muted-foreground">{article.author.name}</span>
+            <span className="text-sm text-muted-foreground">{authorName}</span>
             <span className="text-xs text-muted-foreground/60">·</span>
-            <span className="text-xs text-muted-foreground/60">{formatTime(article.publishedAt)}</span>
+            <span className="text-xs text-muted-foreground/60">{formatTime(article.published_at)}</span>
           </div>
 
           <h3 className="text-lg font-serif font-bold mb-1.5 group-hover:text-gold transition-colors truncate">
@@ -180,10 +224,10 @@ function ArticleCard({ article, onClick }: { article: PublishedArticle; onClick:
             </div>
             <div className="flex items-center gap-4 text-xs text-muted-foreground ml-auto">
               <span className="flex items-center gap-1">
-                <Eye className="w-3 h-3" /> {article.readCount}
+                <Eye className="w-3 h-3" /> {article.read_count}
               </span>
               <span className="flex items-center gap-1">
-                <GitFork className="w-3 h-3" /> {article.branchCount}
+                <GitFork className="w-3 h-3" /> {article.branch_count}
               </span>
             </div>
           </div>
