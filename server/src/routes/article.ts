@@ -108,6 +108,37 @@ articleRouter.post('/:id/publish', requireAuth, async (req: AuthenticatedRequest
 })
 
 /**
+ * GET /api/articles/my-articles
+ * Get current user's articles (drafts + published)
+ */
+articleRouter.get('/my-articles', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const { status } = req.query
+
+  let query = supabaseAdmin
+    .from('interviews')
+    .select(`
+      id, title, subtitle, summary, template_style, tags,
+      status, read_count, branch_count,
+      created_at, published_at
+    `)
+    .eq('creator_id', req.userId)
+    .order('created_at', { ascending: false })
+
+  if (status && typeof status === 'string') {
+    query = query.eq('status', status)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    res.status(500).json({ error: error.message })
+    return
+  }
+
+  res.json({ articles: data || [] })
+})
+
+/**
  * GET /api/articles/:id
  * Get a published article with its sections and branches
  */

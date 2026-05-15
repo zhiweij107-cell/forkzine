@@ -199,6 +199,14 @@ export async function listArticles(page = 1, limit = 10) {
   return data
 }
 
+export async function listMyArticles(status?: string) {
+  const params = status ? `?status=${status}` : ''
+  const res = await apiFetch(`/articles/my-articles${params}`)
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error)
+  return data
+}
+
 // ========== Branches ==========
 
 export async function createBranch(
