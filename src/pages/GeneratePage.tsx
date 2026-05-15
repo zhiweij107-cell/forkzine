@@ -165,12 +165,17 @@ export function GeneratePage() {
                     tags: [topicTitle || '自由对话', selectedTemplate === 'deep' ? '深度访谈' : selectedTemplate === 'light' ? '轻松漫谈' : '观点碰撞'],
                   })
                 }
-              } catch (e) {
+                navigate('/')
+              } catch (e: any) {
                 console.error('Publish failed:', e)
-                alert('发布失败，请确保已登录后重试')
-                return
+                const msg = e?.message || '未知错误'
+                if (msg.includes('authorization') || msg.includes('token') || msg.includes('401')) {
+                  alert('登录已过期，请重新登录后再发布')
+                  navigate('/auth')
+                } else {
+                  alert(`发布失败: ${msg}`)
+                }
               }
-              navigate('/')
             }}>
               <Check className="w-3.5 h-3.5" /> 发布文章
             </Button>

@@ -195,6 +195,22 @@ articleRouter.post('/publish-direct', requireAuth, async (req: AuthenticatedRequ
   }
 
   try {
+    // Ensure profile exists for this user
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', req.userId)
+      .single()
+
+    if (!existingProfile) {
+      // Create profile
+      await supabaseAdmin.from('profiles').insert({
+        id: req.userId,
+        name: req.userEmail?.split('@')[0] || '用户',
+        email: req.userEmail,
+      })
+    }
+
     // Create interview record
     const { data: interview, error: interviewError } = await supabaseAdmin
       .from('interviews')
