@@ -192,6 +192,22 @@ export async function getArticle(articleId: string) {
   return data
 }
 
+export async function updateArticle(articleId: string, updates: {
+  title?: string
+  subtitle?: string
+  summary?: string
+  tags?: string[]
+  sections?: { id: string; title?: string; content?: string; key_quote?: string; image_prompt?: string; image_url?: string }[]
+}) {
+  const res = await apiFetch(`/articles/${articleId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error)
+  return data
+}
+
 export async function listArticles(page = 1, limit = 10) {
   const res = await apiFetch(`/articles?page=${page}&limit=${limit}`)
   const data = await res.json()

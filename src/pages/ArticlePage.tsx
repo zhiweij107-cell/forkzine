@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { getArticle } from '@/lib/api'
+import { getArticle, updateArticle, getCurrentUser } from '@/lib/api'
 import {
   ArrowLeft, GitFork, Eye, Heart, Share2, Bookmark,
-  MessageSquarePlus, AlertCircle, Loader2
+  MessageSquarePlus, AlertCircle, Loader2, Pencil, Save, X
 } from 'lucide-react'
+
+interface SectionData {
+  id: string
+  title: string
+  content: string
+  key_quote?: string
+  image_prompt?: string
+  image_url?: string
+  order_index: number
+}
 
 interface ArticleData {
   id: string
@@ -17,8 +27,9 @@ interface ArticleData {
   read_count: number
   branch_count: number
   published_at: string
+  creator_id: string
   profiles: { id: string; name: string; title?: string; avatar_url?: string }
-  sections: { id: string; title: string; content: string; key_quote?: string; image_prompt?: string; image_url?: string; order_index: number }[]
+  sections: SectionData[]
 }
 
 export function ArticlePage() {
@@ -27,6 +38,12 @@ export function ArticlePage() {
   const [article, setArticle] = useState<ArticleData | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editData, setEditData] = useState<ArticleData | null>(null)
+
+  const currentUser = getCurrentUser()
+  const isOwner = currentUser && article && article.creator_id === currentUser.id
 
   useEffect(() => {
     if (!id) {
@@ -43,6 +60,50 @@ export function ArticlePage() {
       })
       .finally(() => setLoading(false))
   }, [id])
+
+  const startEditing = () => {
+    setEditData(JSON.parse(JSON.stringify(article)))
+    setEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setEditData(null)
+    setEditing(false)
+  }
+
+  const saveEdits = async () => {
+    if (!editData || !id) return
+    setSaving(true)
+    try {
+      await updateArticle(id, {
+        title: editData.title,
+        subtitle: editData.subtitle,
+        summary: editData.summary,
+        sections: editData.sections.map(s => ({
+          id: s.id,
+          title: s.title,
+          content: s.content,
+          key_quote: s.key_quote,
+          image_prompt: s.image_prompt,
+          image_url: s.image_url,
+        })),
+      })
+      setArticle(editData)
+      setEditing(false)
+      setEditData(null)
+    } catch (e: any) {
+      alert(`保存失败: ${e.message || '未知错误'}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const updateSection = (idx: number, field: keyof SectionData, value: string) => {
+    if (!editData) return
+    const newSections = [...editData.sections]
+    newSections[idx] = { ...newSections[idx], [field]: value }
+    setEditData({ ...editData, sections: newSections })
+  }
 
   if (loading) {
     return (
@@ -67,45 +128,146 @@ export function ArticlePage() {
 
   if (!article) return null
 
+  const displayData = editing ? editData! : article
+
   return (
     <article className="pt-16">
       {/* Cover */}
-      <ArticleCover article={article} />
+      <ArticleCover article={displayData} editing={editing} onUpdate={editing ? (field, value) => setEditData({ ...editData!, [field]: value }) : undefined} />
+
+      {/* Edit toolbar */}
+      {isOwner && (
+        <div className="sticky top-16 z-40 border-b border-border bg-card/90 backdrop-blur-sm">
+          <div className="container mx-auto px-6 max-w-3xl h-12 flex items-center justify-between">
+            {editing ? (
+              <>
+                <span className="text-sm text-gold font-medium flex items-center gap-2">
+                  <Pencil className="w-3.5 h-3.5" /> 编辑模式
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="gap-1.5" onClick={cancelEditing} disabled={saving}>
+                    <X className="w-3.5 h-3.5" /> 取消
+                  </Button>
+                  <Button variant="gold" size="sm" className="gap-1.5" onClick={saveEdits} disabled={saving}>
+                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    保存
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-xs text-muted-foreground">你是这篇文章的作者</span>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={startEditing}>
+                  <Pencil className="w-3.5 h-3.5" /> 编辑文章
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Article body */}
       <div className="container mx-auto px-6 py-16">
         <div className="max-w-3xl mx-auto">
           {/* Summary */}
           <div className="mb-16 pb-8 border-b border-border">
-            <p className="text-lg leading-relaxed text-foreground/80">
-              {article.summary}
-            </p>
+            {editing ? (
+              <textarea
+                value={editData!.summary}
+                onChange={e => setEditData({ ...editData!, summary: e.target.value })}
+                className="w-full text-lg leading-relaxed text-foreground/80 bg-transparent border border-border rounded-lg p-4 resize-none focus:outline-none focus:ring-2 focus:ring-gold/30"
+                rows={3}
+              />
+            ) : (
+              <p className="text-lg leading-relaxed text-foreground/80">
+                {displayData.summary}
+              </p>
+            )}
           </div>
 
           {/* Sections */}
-          {article.sections
+          {displayData.sections
             .sort((a, b) => a.order_index - b.order_index)
             .map((section, idx) => (
             <section key={section.id || idx} className="mb-16 animate-fade-in" style={{ animationDelay: `${idx * 0.1}s` }}>
               {/* Section header */}
-              <h2 className="text-2xl font-serif font-bold mag-header mb-6">{section.title}</h2>
+              {editing ? (
+                <input
+                  type="text"
+                  value={section.title}
+                  onChange={e => updateSection(idx, 'title', e.target.value)}
+                  className="w-full text-2xl font-serif font-bold bg-transparent border-b border-border pb-2 mb-6 focus:outline-none focus:border-gold/50"
+                />
+              ) : (
+                <h2 className="text-2xl font-serif font-bold mag-header mb-6">{section.title}</h2>
+              )}
 
               {/* Key quote */}
-              {section.key_quote && (
+              {editing ? (
+                <div className="my-8">
+                  <label className="text-xs text-muted-foreground mb-1 block">精华引言</label>
+                  <input
+                    type="text"
+                    value={section.key_quote || ''}
+                    onChange={e => updateSection(idx, 'key_quote', e.target.value)}
+                    placeholder="本章节的精华引言..."
+                    className="w-full text-sm bg-transparent border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold/30 italic"
+                  />
+                </div>
+              ) : section.key_quote ? (
                 <blockquote className="pull-quote my-8">
                   {section.key_quote}
                 </blockquote>
-              )}
+              ) : null}
 
               {/* Content */}
-              <div className="prose prose-lg max-w-none">
-                <p className="text-foreground/80 leading-[1.8] text-base whitespace-pre-wrap">
-                  {section.content}
-                </p>
-              </div>
+              {editing ? (
+                <textarea
+                  value={section.content}
+                  onChange={e => updateSection(idx, 'content', e.target.value)}
+                  className="w-full text-foreground/80 leading-[1.8] text-base bg-transparent border border-border rounded-lg p-4 resize-none focus:outline-none focus:ring-2 focus:ring-gold/30"
+                  rows={Math.max(5, Math.ceil(section.content.length / 60))}
+                />
+              ) : (
+                <div className="prose prose-lg max-w-none">
+                  <p className="text-foreground/80 leading-[1.8] text-base whitespace-pre-wrap">
+                    {section.content}
+                  </p>
+                </div>
+              )}
 
               {/* Section image */}
-              {section.image_url ? (
+              {editing ? (
+                <div className="mt-8 space-y-2">
+                  <label className="text-xs text-muted-foreground block">图片 URL（留空则显示配图构想）</label>
+                  <input
+                    type="text"
+                    value={section.image_url || ''}
+                    onChange={e => updateSection(idx, 'image_url', e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                    className="w-full text-sm bg-transparent border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold/30"
+                  />
+                  <label className="text-xs text-muted-foreground block mt-2">配图描述（Midjourney 提示词）</label>
+                  <input
+                    type="text"
+                    value={section.image_prompt || ''}
+                    onChange={e => updateSection(idx, 'image_prompt', e.target.value)}
+                    placeholder="A serene landscape with..."
+                    className="w-full text-sm bg-transparent border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold/30"
+                  />
+                  {(section.image_url || section.image_prompt) && (
+                    <div className="mt-3 aspect-[21/9] rounded-lg overflow-hidden">
+                      {section.image_url ? (
+                        <img src={section.image_url} alt={section.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 flex items-center justify-center border border-white/5">
+                          <p className="text-primary-foreground/60 text-xs italic px-6 text-center">{section.image_prompt}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : section.image_url ? (
                 <div className="mt-8 rounded-lg overflow-hidden">
                   <img src={section.image_url} alt={section.title} className="w-full" />
                 </div>
@@ -155,7 +317,11 @@ export function ArticlePage() {
   )
 }
 
-function ArticleCover({ article }: { article: ArticleData }) {
+function ArticleCover({ article, editing, onUpdate }: {
+  article: ArticleData
+  editing?: boolean
+  onUpdate?: (field: string, value: string) => void
+}) {
   const gradients = [
     'from-navy via-navy-light to-purple-900',
     'from-slate-900 via-indigo-900 to-slate-800',
@@ -196,12 +362,31 @@ function ArticleCover({ article }: { article: ArticleData }) {
             ))}
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary-foreground leading-tight mb-3">
-            {article.title}
-          </h1>
-          <p className="text-xl text-primary-foreground/60 font-serif italic mb-8">
-            {article.subtitle}
-          </p>
+          {editing ? (
+            <>
+              <input
+                type="text"
+                value={article.title}
+                onChange={e => onUpdate?.('title', e.target.value)}
+                className="w-full text-4xl md:text-5xl font-serif font-bold text-primary-foreground leading-tight mb-3 bg-transparent border-b border-white/20 pb-2 focus:outline-none focus:border-gold/50"
+              />
+              <input
+                type="text"
+                value={article.subtitle}
+                onChange={e => onUpdate?.('subtitle', e.target.value)}
+                className="w-full text-xl text-primary-foreground/60 font-serif italic mb-8 bg-transparent border-b border-white/10 pb-2 focus:outline-none focus:border-gold/50"
+              />
+            </>
+          ) : (
+            <>
+              <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary-foreground leading-tight mb-3">
+                {article.title}
+              </h1>
+              <p className="text-xl text-primary-foreground/60 font-serif italic mb-8">
+                {article.subtitle}
+              </p>
+            </>
+          )}
 
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">

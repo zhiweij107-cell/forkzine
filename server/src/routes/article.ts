@@ -108,6 +108,71 @@ articleRouter.post('/:id/publish', requireAuth, async (req: AuthenticatedRequest
 })
 
 /**
+ * PUT /api/articles/:id
+ * Update an article's content (title, subtitle, summary, sections)
+ */
+articleRouter.put('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params
+  const { title, subtitle, summary, sections, tags } = req.body
+
+  // Verify ownership
+  const { data: existing } = await supabaseAdmin
+    .from('interviews')
+    .select('id')
+    .eq('id', id)
+    .eq('creator_id', req.userId)
+    .single()
+
+  if (!existing) {
+    res.status(404).json({ error: 'Article not found or not authorized' })
+    return
+  }
+
+  // Update interview fields
+  const updateFields: Record<string, unknown> = {}
+  if (title !== undefined) updateFields.title = title
+  if (subtitle !== undefined) updateFields.subtitle = subtitle
+  if (summary !== undefined) updateFields.summary = summary
+  if (tags !== undefined) updateFields.tags = tags
+
+  if (Object.keys(updateFields).length > 0) {
+    const { error } = await supabaseAdmin
+      .from('interviews')
+      .update(updateFields)
+      .eq('id', id)
+
+    if (error) {
+      res.status(500).json({ error: error.message })
+      return
+    }
+  }
+
+  // Update sections if provided
+  if (sections && Array.isArray(sections)) {
+    for (const section of sections) {
+      if (section.id) {
+        const sectionUpdate: Record<string, unknown> = {}
+        if (section.title !== undefined) sectionUpdate.title = section.title
+        if (section.content !== undefined) sectionUpdate.content = section.content
+        if (section.key_quote !== undefined) sectionUpdate.key_quote = section.key_quote
+        if (section.image_prompt !== undefined) sectionUpdate.image_prompt = section.image_prompt
+        if (section.image_url !== undefined) sectionUpdate.image_url = section.image_url
+
+        if (Object.keys(sectionUpdate).length > 0) {
+          await supabaseAdmin
+            .from('sections')
+            .update(sectionUpdate)
+            .eq('id', section.id)
+            .eq('interview_id', id)
+        }
+      }
+    }
+  }
+
+  res.json({ success: true })
+})
+
+/**
  * GET /api/articles/my-articles
  * Get current user's articles (drafts + published)
  */
