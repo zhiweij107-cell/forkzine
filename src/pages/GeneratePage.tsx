@@ -12,6 +12,7 @@ interface GeneratedSection {
   content: string
   keyQuote?: string
   imagePrompt?: string
+  imageUrl?: string
 }
 
 interface GeneratedArticle {
@@ -331,7 +332,7 @@ function EditablePreview({
     setUploadingIdx(idx)
     try {
       const { url } = await uploadImage(file)
-      updateSection(idx, 'imagePrompt', url)
+      updateSection(idx, 'imageUrl', url)
     } catch {
       alert('图片上传失败')
     } finally {
@@ -457,11 +458,11 @@ function EditablePreview({
 
               {/* Image section */}
               <div className="mt-4 rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 border border-white/5 overflow-hidden">
-                {section.imagePrompt?.startsWith('http') ? (
+                {section.imageUrl ? (
                   <div className="relative">
-                    <img src={section.imagePrompt} alt="" className="w-full aspect-[16/5] object-cover" />
+                    <img src={section.imageUrl} alt="" className="w-full aspect-[16/5] object-cover" />
                     <button
-                      onClick={() => updateSection(idx, 'imagePrompt', '')}
+                      onClick={() => updateSection(idx, 'imageUrl', '')}
                       className="absolute top-2 right-2 px-2 py-1 rounded bg-black/60 text-xs text-white hover:bg-black/80"
                     >
                       移除
@@ -506,11 +507,10 @@ function EditablePreview({
               <div className="mt-2">
                 <input
                   type="text"
-                  value={section.imagePrompt?.startsWith('http') ? '' : (section.imagePrompt || '')}
+                  value={section.imagePrompt || ''}
                   onChange={e => updateSection(idx, 'imagePrompt', e.target.value)}
                   className="w-full text-xs bg-transparent border border-border rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-gold/30 text-muted-foreground"
                   placeholder="配图描述（Midjourney 提示词）"
-                  disabled={section.imagePrompt?.startsWith('http')}
                 />
               </div>
             </div>
