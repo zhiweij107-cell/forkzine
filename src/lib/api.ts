@@ -310,7 +310,7 @@ export async function generateImage(prompt: string, aspectRatio = '16:9') {
 }
 
 export async function uploadImage(file: File): Promise<{ url: string }> {
-  const token = getAccessToken()
+  let token = getAccessToken()
   const formData = new FormData()
   formData.append('image', file)
 
@@ -319,11 +319,31 @@ export async function uploadImage(file: File): Promise<{ url: string }> {
     headers['Authorization'] = `Bearer ${token}`
   }
 
-  const response = await fetch(`${API_BASE}/images/upload`, {
+  let response = await fetch(`${API_BASE}/images/upload`, {
     method: 'POST',
     headers,
     body: formData,
   })
+
+  // Handle 401 - try refresh token
+  if (response.status === 401) {
+    const refreshed = await refreshToken()
+    if (refreshed) {
+      token = getAccessToken()
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      const retryFormData = new FormData()
+      retryFormData.append('image', file)
+      response = await fetch(`${API_BASE}/images/upload`, {
+        method: 'POST',
+        headers,
+        body: retryFormData,
+      })
+    } else {
+      throw new Error('登录已过期，请重新登录')
+    }
+  }
 
   const data = await response.json()
   if (!response.ok) throw new Error(data.error || 'Upload failed')
