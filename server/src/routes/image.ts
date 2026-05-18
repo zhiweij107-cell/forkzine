@@ -89,43 +89,47 @@ imageRouter.post('/upload', requireAuth, upload.single('image'), async (req: Aut
     const ext = file.originalname.split('.').pop() || 'jpg'
     const fileName = `${req.userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
 
+    console.log(`[Upload] Attempting upload: ${fileName}, size: ${file.size}, type: ${file.mimetype}`)
+
+    // Ensure bucket exists and is public
+    const { data: buckets } = await supabaseAdmin.storage.listBuckets()
+    const bucket = buckets?.find(b => b.name === 'article-images')
+    if (!bucket) {
+      console.log('[Upload] Creating bucket article-images')
+      const { error: createError } = await supabaseAdmin.storage.createBucket('article-images', {
+        public: true,
+        fileSizeLimit: 10 * 1024 * 1024,
+      })
+      if (createError && !createError.message.includes('already exists')) {
+        res.status(500).json({ error: 'Failed to create bucket: ' + createError.message })
+        return
+      }
+    } else if (!bucket.public) {
+      // Make bucket public if it isn't
+      await supabaseAdmin.storage.updateBucket('article-images', { public: true })
+    }
+
     const { error: uploadError } = await supabaseAdmin.storage
       .from('article-images')
       .upload(fileName, file.buffer, {
         contentType: file.mimetype,
-        upsert: false,
+        upsert: true,
       })
 
     if (uploadError) {
-      // If bucket doesn't exist, try to create it
-      if (uploadError.message.includes('not found') || uploadError.message.includes('Bucket')) {
-        await supabaseAdmin.storage.createBucket('article-images', {
-          public: true,
-          fileSizeLimit: 10 * 1024 * 1024,
-        })
-        // Retry upload
-        const { error: retryError } = await supabaseAdmin.storage
-          .from('article-images')
-          .upload(fileName, file.buffer, {
-            contentType: file.mimetype,
-            upsert: false,
-          })
-        if (retryError) {
-          res.status(500).json({ error: 'Upload failed: ' + retryError.message })
-          return
-        }
-      } else {
-        res.status(500).json({ error: 'Upload failed: ' + uploadError.message })
-        return
-      }
+      console.error('[Upload] Upload error:', uploadError)
+      res.status(500).json({ error: 'Upload failed: ' + uploadError.message })
+      return
     }
 
     const { data: urlData } = supabaseAdmin.storage
       .from('article-images')
       .getPublicUrl(fileName)
 
+    console.log(`[Upload] Success: ${urlData.publicUrl}`)
     res.json({ url: urlData.publicUrl })
   } catch (error: any) {
+    console.error('[Upload] Exception:', error)
     const message = error instanceof Error ? error.message : 'Upload failed'
     res.status(500).json({ error: message })
   }
