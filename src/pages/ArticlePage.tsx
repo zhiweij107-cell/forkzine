@@ -257,7 +257,7 @@ export function ArticlePage() {
                   />
                   {(section.image_url || section.image_prompt) && (
                     <div className="mt-3 aspect-[21/9] rounded-lg overflow-hidden">
-                      {section.image_url ? (
+                      {section.image_url && !section.image_url.includes('placehold.co') ? (
                         <img src={section.image_url} alt={section.title} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 flex items-center justify-center border border-white/5">
@@ -267,7 +267,7 @@ export function ArticlePage() {
                     </div>
                   )}
                 </div>
-              ) : section.image_url ? (
+              ) : (section.image_url && !section.image_url.includes('placehold.co')) ? (
                 <div className="mt-8 rounded-lg overflow-hidden">
                   <img src={section.image_url} alt={section.title} className="w-full" />
                 </div>

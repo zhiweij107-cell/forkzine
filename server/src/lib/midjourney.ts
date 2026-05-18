@@ -18,11 +18,11 @@ export interface ImageGenerationResult {
  */
 export async function submitImageTask(prompt: string): Promise<ImageGenerationResult> {
   if (!MJ_API_KEY) {
-    // Fallback: return a placeholder when no API key is configured
+    // No API key configured - return without image URL so frontend shows the prompt
     return {
       taskId: `mock-${Date.now()}`,
       status: 'completed',
-      imageUrl: generatePlaceholderUrl(prompt),
+      imageUrl: undefined,
     }
   }
 
