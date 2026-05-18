@@ -1,6 +1,10 @@
 import { Router } from 'express'
+import multer from 'multer'
 import { submitImageTask, checkImageTask, submitImg2ImgTask } from '../lib/midjourney.js'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth.js'
+import { supabaseAdmin } from '../lib/supabase.js'
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
 export const imageRouter = Router()
 
@@ -59,6 +63,70 @@ imageRouter.get('/status/:taskId', async (req, res) => {
     res.json(result)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Status check failed'
+    res.status(500).json({ error: message })
+  }
+})
+
+
+/**
+ * POST /api/images/upload
+ * Upload an image to Supabase Storage
+ */
+imageRouter.post('/upload', requireAuth, upload.single('image'), async (req: AuthenticatedRequest, res) => {
+  const file = req.file
+  if (!file) {
+    res.status(400).json({ error: 'No image file provided' })
+    return
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.mimetype)) {
+    res.status(400).json({ error: 'Invalid file type. Allowed: JPEG, PNG, WebP, GIF' })
+    return
+  }
+
+  try {
+    const ext = file.originalname.split('.').pop() || 'jpg'
+    const fileName = `${req.userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('article-images')
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      })
+
+    if (uploadError) {
+      // If bucket doesn't exist, try to create it
+      if (uploadError.message.includes('not found') || uploadError.message.includes('Bucket')) {
+        await supabaseAdmin.storage.createBucket('article-images', {
+          public: true,
+          fileSizeLimit: 10 * 1024 * 1024,
+        })
+        // Retry upload
+        const { error: retryError } = await supabaseAdmin.storage
+          .from('article-images')
+          .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          })
+        if (retryError) {
+          res.status(500).json({ error: 'Upload failed: ' + retryError.message })
+          return
+        }
+      } else {
+        res.status(500).json({ error: 'Upload failed: ' + uploadError.message })
+        return
+      }
+    }
+
+    const { data: urlData } = supabaseAdmin.storage
+      .from('article-images')
+      .getPublicUrl(fileName)
+
+    res.json({ url: urlData.publicUrl })
+  } catch (error: any) {
+    const message = error instanceof Error ? error.message : 'Upload failed'
     res.status(500).json({ error: message })
   }
 })

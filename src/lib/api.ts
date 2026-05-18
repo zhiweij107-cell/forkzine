@@ -308,6 +308,27 @@ export async function generateImage(prompt: string, aspectRatio = '16:9') {
   return data
 }
 
+export async function uploadImage(file: File): Promise<{ url: string }> {
+  const token = getAccessToken()
+  const formData = new FormData()
+  formData.append('image', file)
+
+  const headers: Record<string, string> = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  const response = await fetch(`${API_BASE}/images/upload`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  })
+
+  const data = await response.json()
+  if (!response.ok) throw new Error(data.error || 'Upload failed')
+  return data
+}
+
 export async function checkImageStatus(taskId: string) {
   const res = await apiFetch(`/images/status/${taskId}`)
   const data = await res.json()

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { getArticle, updateArticle, getCurrentUser } from '@/lib/api'
+import { getArticle, updateArticle, getCurrentUser, uploadImage } from '@/lib/api'
 import {
   ArrowLeft, GitFork, Eye, Heart, Share2, Bookmark,
-  MessageSquarePlus, AlertCircle, Loader2, Pencil, Save, X
+  MessageSquarePlus, AlertCircle, Loader2, Pencil, Save, X, Upload
 } from 'lucide-react'
 
 interface SectionData {
@@ -41,6 +41,7 @@ export function ArticlePage() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editData, setEditData] = useState<ArticleData | null>(null)
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
 
   const currentUser = getCurrentUser()
   const isOwner = currentUser && article && article.creator_id === currentUser.id
@@ -103,6 +104,18 @@ export function ArticlePage() {
     const newSections = [...editData.sections]
     newSections[idx] = { ...newSections[idx], [field]: value }
     setEditData({ ...editData, sections: newSections })
+  }
+
+  const handleImageUpload = async (idx: number, file: File) => {
+    setUploadingIdx(idx)
+    try {
+      const { url } = await uploadImage(file)
+      updateSection(idx, 'image_url', url)
+    } catch (e: any) {
+      alert(`图片上传失败: ${e.message || '未知错误'}`)
+    } finally {
+      setUploadingIdx(null)
+    }
   }
 
   if (loading) {
@@ -238,34 +251,60 @@ export function ArticlePage() {
 
               {/* Section image */}
               {editing ? (
-                <div className="mt-8 space-y-2">
-                  <label className="text-xs text-muted-foreground block">图片 URL（留空则显示配图构想）</label>
-                  <input
-                    type="text"
-                    value={section.image_url || ''}
-                    onChange={e => updateSection(idx, 'image_url', e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full text-sm bg-transparent border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold/30"
-                  />
-                  <label className="text-xs text-muted-foreground block mt-2">配图描述（Midjourney 提示词）</label>
-                  <input
-                    type="text"
-                    value={section.image_prompt || ''}
-                    onChange={e => updateSection(idx, 'image_prompt', e.target.value)}
-                    placeholder="A serene landscape with..."
-                    className="w-full text-sm bg-transparent border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold/30"
-                  />
-                  {(section.image_url || section.image_prompt) && (
-                    <div className="mt-3 aspect-[21/9] rounded-lg overflow-hidden">
-                      {section.image_url && !section.image_url.includes('placehold.co') ? (
-                        <img src={section.image_url} alt={section.title} className="w-full h-full object-cover" />
+                <div className="mt-8 space-y-3">
+                  {/* Upload button */}
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 cursor-pointer transition-colors text-sm">
+                      {uploadingIdx === idx ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 flex items-center justify-center border border-white/5">
-                          <p className="text-primary-foreground/60 text-xs italic px-6 text-center">{section.image_prompt}</p>
-                        </div>
+                        <Upload className="w-4 h-4" />
                       )}
+                      {uploadingIdx === idx ? '上传中...' : '上传图片'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        disabled={uploadingIdx !== null}
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (file) handleImageUpload(idx, file)
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                    {section.image_url && !section.image_url.includes('placehold.co') && (
+                      <button
+                        onClick={() => updateSection(idx, 'image_url', '')}
+                        className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        移除图片
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Image prompt */}
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">配图描述（无图片时显示）</label>
+                    <input
+                      type="text"
+                      value={section.image_prompt || ''}
+                      onChange={e => updateSection(idx, 'image_prompt', e.target.value)}
+                      placeholder="A serene landscape with..."
+                      className="w-full text-sm bg-transparent border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold/30"
+                    />
+                  </div>
+
+                  {/* Preview */}
+                  {(section.image_url && !section.image_url.includes('placehold.co')) ? (
+                    <div className="aspect-[21/9] rounded-lg overflow-hidden">
+                      <img src={section.image_url} alt={section.title} className="w-full h-full object-cover" />
                     </div>
-                  )}
+                  ) : section.image_prompt ? (
+                    <div className="aspect-[21/9] rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 flex items-center justify-center border border-white/5">
+                      <p className="text-primary-foreground/60 text-xs italic px-6 text-center">{section.image_prompt}</p>
+                    </div>
+                  ) : null}
                 </div>
               ) : (section.image_url && !section.image_url.includes('placehold.co')) ? (
                 <div className="mt-8 rounded-lg overflow-hidden">
