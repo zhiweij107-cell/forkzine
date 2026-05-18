@@ -113,7 +113,7 @@ articleRouter.post('/:id/publish', requireAuth, async (req: AuthenticatedRequest
  */
 articleRouter.put('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params
-  const { title, subtitle, summary, sections, tags } = req.body
+  const { title, subtitle, summary, sections, tags, cover_gradient } = req.body
 
   // Verify ownership
   const { data: existing } = await supabaseAdmin
@@ -134,6 +134,7 @@ articleRouter.put('/:id', requireAuth, async (req: AuthenticatedRequest, res: Re
   if (subtitle !== undefined) updateFields.subtitle = subtitle
   if (summary !== undefined) updateFields.summary = summary
   if (tags !== undefined) updateFields.tags = tags
+  if (cover_gradient !== undefined) updateFields.cover_gradient = cover_gradient
 
   if (Object.keys(updateFields).length > 0) {
     const { error } = await supabaseAdmin

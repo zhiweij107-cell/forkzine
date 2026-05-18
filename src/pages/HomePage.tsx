@@ -14,6 +14,7 @@ interface ArticleItem {
   read_count: number
   branch_count: number
   published_at: string
+  cover_gradient: string
   profiles: { id: string; name: string; title?: string; avatar_url?: string }
 }
 
@@ -234,10 +235,14 @@ function ArticleCard({ article, onClick }: { article: ArticleItem; onClick: () =
         </div>
 
         {/* Cover thumbnail */}
-        <div className="hidden sm:block w-32 h-24 rounded-lg bg-gradient-to-br from-navy via-navy-light to-purple-900 flex-shrink-0 overflow-hidden">
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="font-serif text-lg text-gold/40">&ldquo;</span>
-          </div>
+        <div className="hidden sm:block w-32 h-24 rounded-lg flex-shrink-0 overflow-hidden">
+          {article.cover_gradient?.startsWith('http') ? (
+            <img src={article.cover_gradient} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className={`w-full h-full bg-gradient-to-br ${article.cover_gradient || 'from-navy via-navy-light to-purple-900'} flex items-center justify-center`}>
+              <span className="font-serif text-lg text-gold/40">&ldquo;</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

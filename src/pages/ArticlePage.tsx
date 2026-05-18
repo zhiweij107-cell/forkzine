@@ -28,6 +28,7 @@ interface ArticleData {
   branch_count: number
   published_at: string
   creator_id: string
+  cover_gradient: string
   profiles: { id: string; name: string; title?: string; avatar_url?: string }
   sections: SectionData[]
 }
@@ -42,6 +43,7 @@ export function ArticlePage() {
   const [saving, setSaving] = useState(false)
   const [editData, setEditData] = useState<ArticleData | null>(null)
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
+  const [uploadingCover, setUploadingCover] = useState(false)
 
   const currentUser = getCurrentUser()
   const isOwner = currentUser && article && article.creator_id === currentUser.id
@@ -80,6 +82,7 @@ export function ArticlePage() {
         title: editData.title,
         subtitle: editData.subtitle,
         summary: editData.summary,
+        cover_gradient: editData.cover_gradient,
         sections: editData.sections.map(s => ({
           id: s.id,
           title: s.title,
@@ -118,6 +121,18 @@ export function ArticlePage() {
     }
   }
 
+  const handleCoverUpload = async (file: File) => {
+    setUploadingCover(true)
+    try {
+      const { url } = await uploadImage(file)
+      setEditData({ ...editData!, cover_gradient: url })
+    } catch (e: any) {
+      alert(`封面上传失败: ${e.message || '未知错误'}`)
+    } finally {
+      setUploadingCover(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen pt-16 flex items-center justify-center">
@@ -146,7 +161,13 @@ export function ArticlePage() {
   return (
     <article className="pt-16">
       {/* Cover */}
-      <ArticleCover article={displayData} editing={editing} onUpdate={editing ? (field, value) => setEditData({ ...editData!, [field]: value }) : undefined} />
+      <ArticleCover
+        article={displayData}
+        editing={editing}
+        onUpdate={editing ? (field, value) => setEditData({ ...editData!, [field]: value }) : undefined}
+        onCoverUpload={editing ? handleCoverUpload : undefined}
+        uploadingCover={uploadingCover}
+      />
 
       {/* Edit toolbar */}
       {isOwner && (
@@ -356,10 +377,12 @@ export function ArticlePage() {
   )
 }
 
-function ArticleCover({ article, editing, onUpdate }: {
+function ArticleCover({ article, editing, onUpdate, onCoverUpload, uploadingCover }: {
   article: ArticleData
   editing?: boolean
   onUpdate?: (field: string, value: string) => void
+  onCoverUpload?: (file: File) => void
+  uploadingCover?: boolean
 }) {
   const gradients = [
     'from-navy via-navy-light to-purple-900',
@@ -367,6 +390,7 @@ function ArticleCover({ article, editing, onUpdate }: {
     'from-emerald-900 via-teal-900 to-slate-900',
   ]
   const gradient = gradients[Math.abs(article.title.length) % gradients.length]
+  const hasCoverImage = article.cover_gradient?.startsWith('http')
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -376,11 +400,19 @@ function ArticleCover({ article, editing, onUpdate }: {
   const authorName = article.profiles?.name || '匿名'
 
   return (
-    <div className={`relative min-h-[50vh] flex items-end bg-gradient-to-br ${gradient}`}>
-      {/* Decorations */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/3 right-1/4 w-64 h-64 rounded-full bg-gold/5 blur-3xl" />
-      </div>
+    <div className={`relative min-h-[50vh] flex items-end ${hasCoverImage ? '' : `bg-gradient-to-br ${gradient}`}`}>
+      {/* Cover image or gradient */}
+      {hasCoverImage && (
+        <img src={article.cover_gradient} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      )}
+      {hasCoverImage && <div className="absolute inset-0 bg-black/50" />}
+
+      {/* Decorations (only for gradient) */}
+      {!hasCoverImage && (
+        <div className="absolute inset-0">
+          <div className="absolute top-1/3 right-1/4 w-64 h-64 rounded-full bg-gold/5 blur-3xl" />
+        </div>
+      )}
 
       {/* Back button */}
       <div className="absolute top-20 left-6">
@@ -390,6 +422,31 @@ function ArticleCover({ article, editing, onUpdate }: {
           </Button>
         </Link>
       </div>
+
+      {/* Cover upload button (edit mode) */}
+      {editing && (
+        <div className="absolute top-20 right-6">
+          <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 cursor-pointer transition-colors text-xs text-primary-foreground">
+            {uploadingCover ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Upload className="w-3.5 h-3.5" />
+            )}
+            {uploadingCover ? '上传中...' : '更换封面'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              disabled={uploadingCover}
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file && onCoverUpload) onCoverUpload(file)
+                e.target.value = ''
+              }}
+            />
+          </label>
+        </div>
+      )}
 
       <div className="container mx-auto px-6 pb-16 pt-32 relative z-10">
         <div className="max-w-2xl">

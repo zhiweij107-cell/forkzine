@@ -197,6 +197,7 @@ export async function updateArticle(articleId: string, updates: {
   subtitle?: string
   summary?: string
   tags?: string[]
+  cover_gradient?: string
   sections?: { id: string; title?: string; content?: string; key_quote?: string; image_prompt?: string; image_url?: string }[]
 }) {
   const res = await apiFetch(`/articles/${articleId}`, {
