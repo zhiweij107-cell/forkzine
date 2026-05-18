@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, GitFork, Eye, Sparkles, Clock, Flame, Tag, Loader2 } from 'lucide-react'
-import { listArticles } from '@/lib/api'
+import { ArrowRight, GitFork, Eye, Sparkles, Clock, Flame, Tag, Loader2, Upload } from 'lucide-react'
+import { listArticles, getCurrentUser, uploadImage, updateArticle } from '@/lib/api'
 
 interface ArticleItem {
   id: string
@@ -161,6 +161,9 @@ function ArticleFeed() {
                 key={article.id}
                 article={article}
                 onClick={() => navigate(`/article/${article.id}`)}
+                onCoverUpdate={(url) => {
+                  setArticles(prev => prev.map(a => a.id === article.id ? { ...a, cover_gradient: url } : a))
+                }}
               />
             ))}
           </div>
@@ -170,7 +173,24 @@ function ArticleFeed() {
   )
 }
 
-function ArticleCard({ article, onClick }: { article: ArticleItem; onClick: () => void }) {
+function ArticleCard({ article, onClick, onCoverUpdate }: { article: ArticleItem; onClick: () => void; onCoverUpdate: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false)
+  const currentUser = getCurrentUser()
+  const isOwner = currentUser && article.profiles?.id === currentUser.id
+
+  const handleCoverUpload = async (file: File) => {
+    setUploading(true)
+    try {
+      const { url } = await uploadImage(file)
+      await updateArticle(article.id, { cover_gradient: url })
+      onCoverUpdate(url)
+    } catch {
+      alert('封面上传失败')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr)
     const now = new Date()
@@ -235,13 +255,36 @@ function ArticleCard({ article, onClick }: { article: ArticleItem; onClick: () =
         </div>
 
         {/* Cover thumbnail */}
-        <div className="hidden sm:block w-32 h-24 rounded-lg flex-shrink-0 overflow-hidden">
+        <div className="hidden sm:block w-32 h-24 rounded-lg flex-shrink-0 overflow-hidden relative group/cover">
           {article.cover_gradient?.startsWith('http') ? (
             <img src={article.cover_gradient} alt="" className="w-full h-full object-cover" />
           ) : (
             <div className={`w-full h-full bg-gradient-to-br ${article.cover_gradient || 'from-navy via-navy-light to-purple-900'} flex items-center justify-center`}>
               <span className="font-serif text-lg text-gold/40">&ldquo;</span>
             </div>
+          )}
+          {isOwner && (
+            <label
+              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/cover:opacity-100 transition-opacity cursor-pointer"
+              onClick={e => e.stopPropagation()}
+            >
+              {uploading ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : (
+                <Upload className="w-5 h-5 text-white" />
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                disabled={uploading}
+                onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (file) handleCoverUpload(file)
+                  e.target.value = ''
+                }}
+              />
+            </label>
           )}
         </div>
       </div>
