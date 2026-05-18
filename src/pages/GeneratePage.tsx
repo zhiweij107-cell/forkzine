@@ -3,9 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   ArrowLeft, BookOpen, Wand2, RefreshCw, Check,
-  Image, Palette, Type, AlertCircle
+  Palette, Type, AlertCircle, Upload, Loader2
 } from 'lucide-react'
-import { publishArticle as publishToAPI, publishArticleDirect } from '@/lib/api'
+import { publishArticle as publishToAPI, publishArticleDirect, uploadImage } from '@/lib/api'
 
 interface GeneratedSection {
   title: string
@@ -276,87 +276,13 @@ export function GeneratePage() {
 
         {/* Step: Preview */}
         {step === 'preview' && article && (
-          <div className="animate-fade-in">
-            <div className="mb-8 p-4 rounded-lg bg-gold/5 border border-gold/20 flex items-center gap-3">
-              <Wand2 className="w-5 h-5 text-gold flex-shrink-0" />
-              <p className="text-sm text-foreground/80">
-                文章已生成。你可以编辑标题、调整章节顺序，或重新生成配图。满意后点击右上角"发布文章"。
-              </p>
-            </div>
-
-            {/* Article Preview */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              {/* Cover preview */}
-              <div className="aspect-[21/9] bg-gradient-to-br from-navy via-navy-light to-purple-900 relative flex items-end p-8">
-                <div>
-                  <input
-                    type="text"
-                    defaultValue={article.title}
-                    className="bg-transparent text-3xl font-serif font-bold text-primary-foreground border-none outline-none w-full"
-                  />
-                  <input
-                    type="text"
-                    defaultValue={article.subtitle}
-                    className="bg-transparent text-lg font-serif italic text-primary-foreground/60 border-none outline-none w-full mt-1"
-                  />
-                </div>
-                <button className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-                  <Image className="w-4 h-4 text-primary-foreground/80" />
-                </button>
-              </div>
-
-              {/* Summary */}
-              {article.summary && (
-                <div className="px-8 pt-6">
-                  <p className="text-sm text-muted-foreground italic leading-relaxed border-l-2 border-gold/30 pl-4">
-                    {article.summary}
-                  </p>
-                </div>
-              )}
-
-              {/* Sections preview */}
-              <div className="p-8 space-y-8">
-                {article.sections.map((section, idx) => (
-                  <div key={idx} className="pb-8 border-b border-border last:border-none last:pb-0">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-lg font-serif font-bold">{section.title}</h3>
-                      <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
-                        章节 {idx + 1}
-                      </span>
-                    </div>
-                    {section.keyQuote && (
-                      <blockquote className="pull-quote my-4 text-base">
-                        {section.keyQuote}
-                      </blockquote>
-                    )}
-                    <p className="text-sm text-foreground/70 leading-relaxed whitespace-pre-wrap">
-                      {section.content}
-                    </p>
-                    <div className="mt-4 aspect-[16/5] rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 flex items-center justify-center border border-white/5">
-                      <div className="text-center px-6 max-w-md">
-                        {section.imagePrompt && (
-                          <p className="text-xs text-primary-foreground/60 italic leading-relaxed">
-                            {section.imagePrompt}
-                          </p>
-                        )}
-                        <span className="inline-block mt-2 text-[10px] text-primary-foreground/30 border border-primary-foreground/10 rounded-full px-2 py-0.5">
-                          AI 配图构想
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Regenerate option */}
-            <div className="mt-6 flex justify-center">
-              <Button variant="outline" className="gap-2" onClick={() => setStep('template')}>
-                <RefreshCw className="w-4 h-4" />
-                换一种风格重新生成
-              </Button>
-            </div>
-          </div>
+          <EditablePreview
+            article={article}
+            onArticleChange={setArticle}
+            selectedTemplate={selectedTemplate}
+            topicTitle={topicTitle}
+            onRegenerate={() => setStep('template')}
+          />
         )}
       </div>
     </div>
@@ -374,6 +300,231 @@ function ProgressStep({ label, done, active }: { label: string; done?: boolean; 
       <span className={`text-sm ${done ? 'text-foreground' : active ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
         {label}
       </span>
+    </div>
+  )
+}
+
+function EditablePreview({
+  article, onArticleChange, onRegenerate
+}: {
+  article: GeneratedArticle
+  onArticleChange: (article: GeneratedArticle) => void
+  selectedTemplate: string
+  topicTitle?: string
+  onRegenerate: () => void
+}) {
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
+  const [coverUrl, setCoverUrl] = useState<string>('')
+  const [uploadingCover, setUploadingCover] = useState(false)
+
+  const updateField = (field: keyof GeneratedArticle, value: string) => {
+    onArticleChange({ ...article, [field]: value })
+  }
+
+  const updateSection = (idx: number, field: keyof GeneratedSection, value: string) => {
+    const newSections = [...article.sections]
+    newSections[idx] = { ...newSections[idx], [field]: value }
+    onArticleChange({ ...article, sections: newSections })
+  }
+
+  const handleSectionImageUpload = async (idx: number, file: File) => {
+    setUploadingIdx(idx)
+    try {
+      const { url } = await uploadImage(file)
+      updateSection(idx, 'imagePrompt', url)
+    } catch {
+      alert('图片上传失败')
+    } finally {
+      setUploadingIdx(null)
+    }
+  }
+
+  const handleCoverUpload = async (file: File) => {
+    setUploadingCover(true)
+    try {
+      const { url } = await uploadImage(file)
+      setCoverUrl(url)
+    } catch {
+      alert('封面上传失败')
+    } finally {
+      setUploadingCover(false)
+    }
+  }
+
+  return (
+    <div className="animate-fade-in">
+      <div className="mb-8 p-4 rounded-lg bg-gold/5 border border-gold/20 flex items-center gap-3">
+        <Wand2 className="w-5 h-5 text-gold flex-shrink-0" />
+        <p className="text-sm text-foreground/80">
+          文章已生成，所有内容均可直接编辑。修改满意后点击右上角"发布文章"。
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        {/* Cover */}
+        <div className="aspect-[21/9] relative flex items-end p-8 overflow-hidden">
+          {coverUrl ? (
+            <>
+              <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/50" />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-navy via-navy-light to-purple-900" />
+          )}
+          <div className="relative z-10 w-full">
+            <input
+              type="text"
+              value={article.title}
+              onChange={e => updateField('title', e.target.value)}
+              className="bg-transparent text-3xl font-serif font-bold text-primary-foreground border-none outline-none w-full placeholder:text-primary-foreground/30"
+              placeholder="文章标题"
+            />
+            <input
+              type="text"
+              value={article.subtitle}
+              onChange={e => updateField('subtitle', e.target.value)}
+              className="bg-transparent text-lg font-serif italic text-primary-foreground/60 border-none outline-none w-full mt-1 placeholder:text-primary-foreground/20"
+              placeholder="副标题"
+            />
+          </div>
+          <label className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors cursor-pointer z-10">
+            {uploadingCover ? (
+              <Loader2 className="w-4 h-4 text-primary-foreground/80 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 text-primary-foreground/80" />
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              disabled={uploadingCover}
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) handleCoverUpload(file)
+                e.target.value = ''
+              }}
+            />
+          </label>
+        </div>
+
+        {/* Summary */}
+        <div className="px-8 pt-6">
+          <label className="text-xs text-muted-foreground mb-1 block">文章摘要</label>
+          <textarea
+            value={article.summary}
+            onChange={e => updateField('summary', e.target.value)}
+            className="w-full text-sm text-muted-foreground italic leading-relaxed border-l-2 border-gold/30 pl-4 bg-transparent resize-none focus:outline-none focus:border-gold"
+            rows={3}
+          />
+        </div>
+
+        {/* Sections */}
+        <div className="p-8 space-y-8">
+          {article.sections.map((section, idx) => (
+            <div key={idx} className="pb-8 border-b border-border last:border-none last:pb-0">
+              <div className="flex items-start justify-between mb-3">
+                <input
+                  type="text"
+                  value={section.title}
+                  onChange={e => updateSection(idx, 'title', e.target.value)}
+                  className="text-lg font-serif font-bold bg-transparent border-none outline-none flex-1 focus:border-b focus:border-gold/30"
+                  placeholder="章节标题"
+                />
+                <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded ml-3 flex-shrink-0">
+                  章节 {idx + 1}
+                </span>
+              </div>
+
+              {/* Key quote */}
+              <div className="my-4">
+                <label className="text-xs text-muted-foreground mb-1 block">精华引言</label>
+                <input
+                  type="text"
+                  value={section.keyQuote || ''}
+                  onChange={e => updateSection(idx, 'keyQuote', e.target.value)}
+                  className="w-full text-sm italic bg-transparent border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30"
+                  placeholder="本章节的精华引言..."
+                />
+              </div>
+
+              {/* Content */}
+              <textarea
+                value={section.content}
+                onChange={e => updateSection(idx, 'content', e.target.value)}
+                className="w-full text-sm text-foreground/70 leading-relaxed bg-transparent border border-border rounded-lg p-3 resize-none focus:outline-none focus:ring-1 focus:ring-gold/30"
+                rows={Math.max(4, Math.ceil(section.content.length / 70))}
+              />
+
+              {/* Image section */}
+              <div className="mt-4 rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 border border-white/5 overflow-hidden">
+                {section.imagePrompt?.startsWith('http') ? (
+                  <div className="relative">
+                    <img src={section.imagePrompt} alt="" className="w-full aspect-[16/5] object-cover" />
+                    <button
+                      onClick={() => updateSection(idx, 'imagePrompt', '')}
+                      className="absolute top-2 right-2 px-2 py-1 rounded bg-black/60 text-xs text-white hover:bg-black/80"
+                    >
+                      移除
+                    </button>
+                  </div>
+                ) : (
+                  <div className="aspect-[16/5] flex items-center justify-center p-4">
+                    <div className="text-center">
+                      <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-xs text-primary-foreground/70 transition-colors cursor-pointer">
+                        {uploadingIdx === idx ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5" />
+                        )}
+                        上传配图
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          disabled={uploadingIdx !== null}
+                          onChange={e => {
+                            const file = e.target.files?.[0]
+                            if (file) handleSectionImageUpload(idx, file)
+                            e.target.value = ''
+                          }}
+                        />
+                      </label>
+                      {section.imagePrompt && (
+                        <p className="mt-3 text-xs text-primary-foreground/50 italic max-w-sm">
+                          {section.imagePrompt}
+                        </p>
+                      )}
+                      <span className="inline-block mt-2 text-[10px] text-primary-foreground/30 border border-primary-foreground/10 rounded-full px-2 py-0.5">
+                        AI 配图构想
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Image prompt editor */}
+              <div className="mt-2">
+                <input
+                  type="text"
+                  value={section.imagePrompt?.startsWith('http') ? '' : (section.imagePrompt || '')}
+                  onChange={e => updateSection(idx, 'imagePrompt', e.target.value)}
+                  className="w-full text-xs bg-transparent border border-border rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-gold/30 text-muted-foreground"
+                  placeholder="配图描述（Midjourney 提示词）"
+                  disabled={section.imagePrompt?.startsWith('http')}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Regenerate option */}
+      <div className="mt-6 flex justify-center">
+        <Button variant="outline" className="gap-2" onClick={onRegenerate}>
+          <RefreshCw className="w-4 h-4" />
+          换一种风格重新生成
+        </Button>
+      </div>
     </div>
   )
 }
