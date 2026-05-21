@@ -5,6 +5,7 @@ import { listArticles } from '@/lib/api'
 import {
   GitFork, Eye, Loader2, Sparkles, TrendingUp, Flame
 } from 'lucide-react'
+import { useT } from '@/lib/i18n'
 
 interface ArticleItem {
   id: string
@@ -19,6 +20,7 @@ interface ArticleItem {
 }
 
 export function TrendingPage() {
+  const t = useT()
   const [articles, setArticles] = useState<ArticleItem[]>([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
@@ -51,11 +53,11 @@ export function TrendingPage() {
         <div className="container mx-auto max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gold/30 bg-gold/10 mb-6">
             <Flame className="w-3.5 h-3.5 text-gold" />
-            <span className="text-xs font-medium text-gold">观点碰撞</span>
+            <span className="text-xs font-medium text-gold">{t('trending.badge')}</span>
           </div>
-          <h1 className="text-4xl font-serif font-bold mb-4">热门分支</h1>
+          <h1 className="text-4xl font-serif font-bold mb-4">{t('trending.title')}</h1>
           <p className="text-muted-foreground">
-            每篇文章都可以被分支，不同的观点在这里碰撞、生长
+            {t('trending.subtitle')}
           </p>
         </div>
       </section>
@@ -66,19 +68,19 @@ export function TrendingPage() {
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center">
               <GitFork className="w-7 h-7 text-gold/50" />
             </div>
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">还没有分支内容</h3>
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">{t('trending.empty.title')}</h3>
             <p className="text-sm text-muted-foreground/60 mb-6">
-              阅读文章时，你可以对任何章节发起分支讨论，表达不同观点
+              {t('trending.empty.desc')}
             </p>
             <Button variant="gold" onClick={() => navigate('/')}>
-              浏览文章
+              {t('trending.empty.cta')}
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-1 h-6 bg-gold rounded-full" />
-              <h2 className="text-2xl font-serif font-bold">最多分支的文章</h2>
+              <h2 className="text-2xl font-serif font-bold">{t('trending.mostForked')}</h2>
               <span className="text-sm text-muted-foreground">({articles.length})</span>
             </div>
 
@@ -105,7 +107,7 @@ export function TrendingPage() {
                   <p className="text-sm text-muted-foreground truncate">{article.subtitle}</p>
                   <div className="flex items-center gap-3 mt-2">
                     <span className="text-xs text-muted-foreground">
-                      {article.profiles?.name || '匿名'}
+                      {article.profiles?.name || t('trending.anonymous')}
                     </span>
                     <div className="flex gap-2">
                       {article.tags?.slice(0, 2).map(tag => (
@@ -136,12 +138,12 @@ export function TrendingPage() {
         {/* CTA */}
         <div className="mt-16 text-center p-8 rounded-2xl border border-border bg-card">
           <Sparkles className="w-8 h-8 text-gold mx-auto mb-4" />
-          <h3 className="text-lg font-serif font-bold mb-2">想要表达不同观点？</h3>
+          <h3 className="text-lg font-serif font-bold mb-2">{t('trending.cta.title')}</h3>
           <p className="text-sm text-muted-foreground mb-6">
-            阅读任何文章时，你可以对章节发起"反驳"、"补充"、"延伸"或"举例"分支
+            {t('trending.cta.desc')}
           </p>
           <Button variant="gold" onClick={() => navigate('/')}>
-            浏览文章
+            {t('trending.cta.btn')}
           </Button>
         </div>
       </div>

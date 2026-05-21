@@ -6,6 +6,7 @@ import {
   ArrowLeft, GitFork, Eye, Heart, Share2, Bookmark,
   MessageSquarePlus, AlertCircle, Loader2, Pencil, Save, X, Upload
 } from 'lucide-react'
+import { useT, useI18n } from '@/lib/i18n'
 
 interface SectionData {
   id: string
@@ -36,6 +37,8 @@ interface ArticleData {
 export function ArticlePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const t = useT()
+  const { locale } = useI18n()
   const [article, setArticle] = useState<ArticleData | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -96,7 +99,7 @@ export function ArticlePage() {
       setEditing(false)
       setEditData(null)
     } catch (e: any) {
-      alert(`保存失败: ${e.message || '未知错误'}`)
+      alert(t('article.saveFailed', { msg: e.message || t('article.unknownError') }))
     } finally {
       setSaving(false)
     }
@@ -115,7 +118,7 @@ export function ArticlePage() {
       const { url } = await uploadImage(file)
       updateSection(idx, 'image_url', url)
     } catch (e: any) {
-      alert(`图片上传失败: ${e.message || '未知错误'}`)
+      alert(t('article.imageUploadFail', { msg: e.message || t('article.unknownError') }))
     } finally {
       setUploadingIdx(null)
     }
@@ -127,7 +130,7 @@ export function ArticlePage() {
       const { url } = await uploadImage(file)
       setEditData({ ...editData!, cover_gradient: url })
     } catch (e: any) {
-      alert(`封面上传失败: ${e.message || '未知错误'}`)
+      alert(t('article.coverUploadFail', { msg: e.message || t('article.unknownError') }))
     } finally {
       setUploadingCover(false)
     }
@@ -147,9 +150,9 @@ export function ArticlePage() {
         <div className="w-20 h-20 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6">
           <AlertCircle className="w-8 h-8 text-red-400" />
         </div>
-        <h2 className="text-xl font-serif font-bold mb-2">文章不存在</h2>
-        <p className="text-sm text-muted-foreground mb-6">该文章可能已被删除或链接无效</p>
-        <Button variant="gold" onClick={() => navigate('/')}>返回首页</Button>
+        <h2 className="text-xl font-serif font-bold mb-2">{t('article.notFound.title')}</h2>
+        <p className="text-sm text-muted-foreground mb-6">{t('article.notFound.desc')}</p>
+        <Button variant="gold" onClick={() => navigate('/')}>{t('article.notFound.cta')}</Button>
       </div>
     )
   }
@@ -164,6 +167,7 @@ export function ArticlePage() {
       <ArticleCover
         article={displayData}
         editing={editing}
+        locale={locale}
         onUpdate={editing ? (field, value) => setEditData({ ...editData!, [field]: value }) : undefined}
         onCoverUpload={editing ? handleCoverUpload : undefined}
         uploadingCover={uploadingCover}
@@ -176,23 +180,23 @@ export function ArticlePage() {
             {editing ? (
               <>
                 <span className="text-sm text-gold font-medium flex items-center gap-2">
-                  <Pencil className="w-3.5 h-3.5" /> 编辑模式
+                  <Pencil className="w-3.5 h-3.5" /> {t('article.editMode')}
                 </span>
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" className="gap-1.5" onClick={cancelEditing} disabled={saving}>
-                    <X className="w-3.5 h-3.5" /> 取消
+                    <X className="w-3.5 h-3.5" /> {t('article.cancel')}
                   </Button>
                   <Button variant="gold" size="sm" className="gap-1.5" onClick={saveEdits} disabled={saving}>
                     {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    保存
+                    {t('article.save')}
                   </Button>
                 </div>
               </>
             ) : (
               <>
-                <span className="text-xs text-muted-foreground">你是这篇文章的作者</span>
+                <span className="text-xs text-muted-foreground">{t('article.ownerHint')}</span>
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={startEditing}>
-                  <Pencil className="w-3.5 h-3.5" /> 编辑文章
+                  <Pencil className="w-3.5 h-3.5" /> {t('article.edit')}
                 </Button>
               </>
             )}
@@ -239,12 +243,12 @@ export function ArticlePage() {
               {/* Key quote */}
               {editing ? (
                 <div className="my-8">
-                  <label className="text-xs text-muted-foreground mb-1 block">精华引言</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">{t('article.keyQuote')}</label>
                   <input
                     type="text"
                     value={section.key_quote || ''}
                     onChange={e => updateSection(idx, 'key_quote', e.target.value)}
-                    placeholder="本章节的精华引言..."
+                    placeholder={t('article.keyQuotePlaceholder')}
                     className="w-full text-sm bg-transparent border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold/30 italic"
                   />
                 </div>
@@ -281,7 +285,7 @@ export function ArticlePage() {
                       ) : (
                         <Upload className="w-4 h-4" />
                       )}
-                      {uploadingIdx === idx ? '上传中...' : '上传图片'}
+                      {uploadingIdx === idx ? t('article.uploading') : t('article.uploadImage')}
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,image/gif"
@@ -299,19 +303,19 @@ export function ArticlePage() {
                         onClick={() => updateSection(idx, 'image_url', '')}
                         className="text-xs text-red-400 hover:text-red-300 transition-colors"
                       >
-                        移除图片
+                        {t('article.removeImage')}
                       </button>
                     )}
                   </div>
 
                   {/* Image prompt */}
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">配图描述（无图片时显示）</label>
+                    <label className="text-xs text-muted-foreground block mb-1">{t('article.imageDescLabel')}</label>
                     <input
                       type="text"
                       value={section.image_prompt || ''}
                       onChange={e => updateSection(idx, 'image_prompt', e.target.value)}
-                      placeholder="A serene landscape with..."
+                      placeholder={t('article.imageDescPlaceholder')}
                       className="w-full text-sm bg-transparent border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold/30"
                     />
                   </div>
@@ -339,7 +343,7 @@ export function ArticlePage() {
                       {section.image_prompt}
                     </p>
                     <span className="inline-block mt-3 text-[10px] text-primary-foreground/30 border border-primary-foreground/10 rounded-full px-2 py-0.5">
-                      AI 配图构想
+                      {t('article.aiImageIdea')}
                     </span>
                   </div>
                 </div>
@@ -356,18 +360,18 @@ export function ArticlePage() {
           <div className="flex items-center justify-between py-8">
             <div className="flex items-center gap-4">
               <Button variant="outline" size="sm" className="gap-2">
-                <Heart className="w-4 h-4" /> 收藏
+                <Heart className="w-4 h-4" /> {t('article.favorite')}
               </Button>
               <Button variant="outline" size="sm" className="gap-2">
-                <Share2 className="w-4 h-4" /> 分享
+                <Share2 className="w-4 h-4" /> {t('article.share')}
               </Button>
               <Button variant="outline" size="sm" className="gap-2">
-                <Bookmark className="w-4 h-4" /> 书签
+                <Bookmark className="w-4 h-4" /> {t('article.bookmark')}
               </Button>
             </div>
             <Link to="/chat">
               <Button variant="gold" size="sm" className="gap-2">
-                <MessageSquarePlus className="w-4 h-4" /> 我也想聊这个话题
+                <MessageSquarePlus className="w-4 h-4" /> {t('article.chatAbout')}
               </Button>
             </Link>
           </div>
@@ -377,13 +381,15 @@ export function ArticlePage() {
   )
 }
 
-function ArticleCover({ article, editing, onUpdate, onCoverUpload, uploadingCover }: {
+function ArticleCover({ article, editing, locale, onUpdate, onCoverUpload, uploadingCover }: {
   article: ArticleData
   editing?: boolean
+  locale: string
   onUpdate?: (field: string, value: string) => void
   onCoverUpload?: (file: File) => void
   uploadingCover?: boolean
 }) {
+  const t = useT()
   const gradients = [
     'from-navy via-navy-light to-purple-900',
     'from-slate-900 via-indigo-900 to-slate-800',
@@ -394,10 +400,16 @@ function ArticleCover({ article, editing, onUpdate, onCoverUpload, uploadingCove
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+    return date.toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   }
 
-  const authorName = article.profiles?.name || '匿名'
+  const authorName = article.profiles?.name || t('article.anonymous')
+
+  const templateLabel = article.template_style === 'deep'
+    ? t('article.deepInterview')
+    : article.template_style === 'light'
+      ? t('article.lightChat')
+      : t('article.debateStyle')
 
   return (
     <div className={`relative min-h-[50vh] flex items-end ${hasCoverImage ? '' : `bg-gradient-to-br ${gradient}`}`}>
@@ -418,7 +430,7 @@ function ArticleCover({ article, editing, onUpdate, onCoverUpload, uploadingCove
       <div className="absolute top-20 left-6">
         <Link to="/">
           <Button variant="ghost" size="sm" className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/10 gap-1">
-            <ArrowLeft className="w-4 h-4" /> 返回
+            <ArrowLeft className="w-4 h-4" /> {t('article.back')}
           </Button>
         </Link>
       </div>
@@ -432,7 +444,7 @@ function ArticleCover({ article, editing, onUpdate, onCoverUpload, uploadingCove
             ) : (
               <Upload className="w-3.5 h-3.5" />
             )}
-            {uploadingCover ? '上传中...' : '更换封面'}
+            {uploadingCover ? t('article.uploading') : t('article.changeCover')}
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
@@ -492,14 +504,14 @@ function ArticleCover({ article, editing, onUpdate, onCoverUpload, uploadingCove
             </div>
             <div>
               <div className="text-sm font-medium text-primary-foreground">{authorName}</div>
-              <div className="text-xs text-primary-foreground/50">{article.template_style === 'deep' ? '深度访谈' : article.template_style === 'light' ? '轻松漫谈' : '观点碰撞'}</div>
+              <div className="text-xs text-primary-foreground/50">{templateLabel}</div>
             </div>
             <div className="ml-auto flex items-center gap-4 text-xs text-primary-foreground/50">
               <span className="flex items-center gap-1">
                 <Eye className="w-3.5 h-3.5" /> {article.read_count}
               </span>
               <span className="flex items-center gap-1">
-                <GitFork className="w-3.5 h-3.5" /> {article.branch_count} 分支
+                <GitFork className="w-3.5 h-3.5" /> {article.branch_count} {t('article.branches')}
               </span>
               {article.published_at && <span>{formatDate(article.published_at)}</span>}
             </div>

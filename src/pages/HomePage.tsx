@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, GitFork, Eye, Sparkles, Clock, Flame, Tag, Loader2, Upload } from 'lucide-react'
 import { listArticles, getCurrentUser, uploadImage, updateArticle } from '@/lib/api'
+import { useT, useI18n } from '@/lib/i18n'
 
 interface ArticleItem {
   id: string
@@ -31,6 +32,7 @@ export function HomePage() {
 }
 
 function HeroSection() {
+  const t = useT()
   return (
     <section className="relative min-h-[70vh] flex items-center overflow-hidden"
       style={{ background: 'var(--gradient-hero)' }}
@@ -45,22 +47,21 @@ function HeroSection() {
         <div className="max-w-3xl">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gold/30 bg-gold/10 mb-8">
             <Sparkles className="w-3.5 h-3.5 text-gold" />
-            <span className="text-xs font-medium text-gold">AI 驱动的深度对话平台</span>
+            <span className="text-xs font-medium text-gold">{t('home.hero.badge')}</span>
           </div>
 
           <h1 className="text-5xl md:text-6xl font-serif font-bold text-primary-foreground leading-[1.1] mb-6">
-            对话即创作<br />
-            <span className="text-gold">观点即分叉</span>
+            {t('home.hero.title1')}<br />
+            <span className="text-gold">{t('home.hero.title2')}</span>
           </h1>
 
           <p className="text-lg text-primary-foreground/70 leading-relaxed max-w-xl mb-10">
-            与 AI 深度对话，自动生成精美杂志访谈。每一个观点都可能成为新的分支，
-            让思想在碰撞中生长。
+            {t('home.hero.subtitle')}
           </p>
 
           <Link to="/chat">
             <Button variant="gold" size="xl" className="gap-2">
-              开始你的第一次对话
+              {t('home.hero.cta')}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
@@ -71,6 +72,8 @@ function HeroSection() {
 }
 
 function ArticleFeed() {
+  const t = useT()
+  const { locale } = useI18n()
   const [sort, setSort] = useState<SortMode>('latest')
   const [articles, setArticles] = useState<ArticleItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -99,9 +102,9 @@ function ArticleFeed() {
   })
 
   const sortOptions: { key: SortMode; label: string; icon: React.ReactNode }[] = [
-    { key: 'latest', label: '最新发布', icon: <Clock className="w-3.5 h-3.5" /> },
-    { key: 'popular', label: '最多阅读', icon: <Flame className="w-3.5 h-3.5" /> },
-    { key: 'topic', label: '按话题', icon: <Tag className="w-3.5 h-3.5" /> },
+    { key: 'latest', label: t('home.feed.sortLatest'), icon: <Clock className="w-3.5 h-3.5" /> },
+    { key: 'popular', label: t('home.feed.sortPopular'), icon: <Flame className="w-3.5 h-3.5" /> },
+    { key: 'topic', label: t('home.feed.sortTopic'), icon: <Tag className="w-3.5 h-3.5" /> },
   ]
 
   return (
@@ -111,7 +114,7 @@ function ArticleFeed() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <div className="w-1 h-6 bg-gold rounded-full" />
-            <h2 className="text-2xl font-serif font-bold">访谈文章</h2>
+            <h2 className="text-2xl font-serif font-bold">{t('home.feed.title')}</h2>
             <span className="text-sm text-muted-foreground">({sortedArticles.length})</span>
           </div>
 
@@ -143,14 +146,14 @@ function ArticleFeed() {
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center">
               <Sparkles className="w-7 h-7 text-gold/50" />
             </div>
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">还没有发布的文章</h3>
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">{t('home.feed.empty.title')}</h3>
             <p className="text-sm text-muted-foreground/60 mb-6">
-              开始一段对话，生成你的第一篇杂志风格访谈文章吧
+              {t('home.feed.empty.desc')}
             </p>
             <Link to="/chat">
               <Button variant="gold" className="gap-2">
                 <Sparkles className="w-4 h-4" />
-                开始对话
+                {t('home.feed.empty.cta')}
               </Button>
             </Link>
           </div>
@@ -160,6 +163,7 @@ function ArticleFeed() {
               <ArticleCard
                 key={article.id}
                 article={article}
+                locale={locale}
                 onClick={() => navigate(`/article/${article.id}`)}
                 onCoverUpdate={(url) => {
                   setArticles(prev => prev.map(a => a.id === article.id ? { ...a, cover_gradient: url } : a))
@@ -173,10 +177,11 @@ function ArticleFeed() {
   )
 }
 
-function ArticleCard({ article, onClick, onCoverUpdate }: { article: ArticleItem; onClick: () => void; onCoverUpdate: (url: string) => void }) {
+function ArticleCard({ article, locale, onClick, onCoverUpdate }: { article: ArticleItem; locale: string; onClick: () => void; onCoverUpdate: (url: string) => void }) {
   const [uploading, setUploading] = useState(false)
   const currentUser = getCurrentUser()
   const isOwner = currentUser && article.profiles?.id === currentUser.id
+  const t = useT()
 
   const handleCoverUpload = async (file: File) => {
     setUploading(true)
@@ -185,7 +190,7 @@ function ArticleCard({ article, onClick, onCoverUpdate }: { article: ArticleItem
       await updateArticle(article.id, { cover_gradient: url })
       onCoverUpdate(url)
     } catch {
-      alert('封面上传失败')
+      alert(t('home.feed.coverUploadFail'))
     } finally {
       setUploading(false)
     }
@@ -199,14 +204,14 @@ function ArticleCard({ article, onClick, onCoverUpdate }: { article: ArticleItem
     const diffHour = Math.floor(diffMs / 3600000)
     const diffDay = Math.floor(diffMs / 86400000)
 
-    if (diffMin < 1) return '刚刚'
-    if (diffMin < 60) return `${diffMin} 分钟前`
-    if (diffHour < 24) return `${diffHour} 小时前`
-    if (diffDay < 7) return `${diffDay} 天前`
-    return date.toLocaleDateString('zh-CN')
+    if (diffMin < 1) return t('home.feed.justNow')
+    if (diffMin < 60) return t('home.feed.minutesAgo', { n: diffMin })
+    if (diffHour < 24) return t('home.feed.hoursAgo', { n: diffHour })
+    if (diffDay < 7) return t('home.feed.daysAgo', { n: diffDay })
+    return date.toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US')
   }
 
-  const authorName = article.profiles?.name || '匿名'
+  const authorName = article.profiles?.name || t('home.feed.anonymous')
 
   return (
     <div
@@ -293,6 +298,7 @@ function ArticleCard({ article, onClick, onCoverUpdate }: { article: ArticleItem
 }
 
 function Footer() {
+  const t = useT()
   return (
     <footer className="border-t border-border py-12 px-6">
       <div className="container mx-auto">
@@ -304,7 +310,7 @@ function Footer() {
             <span className="font-serif font-bold">Forkzine</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            &copy; 2026 Forkzine. 对话即创作，观点即分叉。
+            {t('home.footer.slogan')}
           </p>
         </div>
       </div>

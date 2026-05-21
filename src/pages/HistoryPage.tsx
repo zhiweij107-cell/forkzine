@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { getConversations, deleteConversation, type ConversationRecord } from '@/lib/conversations'
 import { listMyArticles, publishArticle, isAuthenticated } from '@/lib/api'
+import { useT, useI18n } from '@/lib/i18n'
 
 type Tab = 'conversations' | 'drafts'
 
@@ -26,6 +27,8 @@ interface DraftArticle {
 
 export function HistoryPage() {
   const navigate = useNavigate()
+  const t = useT()
+  const { locale } = useI18n()
   const [tab, setTab] = useState<Tab>('conversations')
   const [conversations, setConversations] = useState<ConversationRecord[]>(getConversations)
   const [drafts, setDrafts] = useState<DraftArticle[]>([])
@@ -67,7 +70,7 @@ export function HistoryPage() {
         setPublished(prev => [{ ...published_item, status: 'published' }, ...prev])
       }
     } catch {
-      alert('发布失败，请重试')
+      alert(t('history.drafts.publishFailed'))
     }
   }
 
@@ -79,11 +82,11 @@ export function HistoryPage() {
     const diffHour = Math.floor(diffMs / 3600000)
     const diffDay = Math.floor(diffMs / 86400000)
 
-    if (diffMin < 1) return '刚刚'
-    if (diffMin < 60) return `${diffMin} 分钟前`
-    if (diffHour < 24) return `${diffHour} 小时前`
-    if (diffDay < 7) return `${diffDay} 天前`
-    return date.toLocaleDateString('zh-CN')
+    if (diffMin < 1) return t('history.justNow')
+    if (diffMin < 60) return t('history.minutesAgo', { n: diffMin })
+    if (diffHour < 24) return t('history.hoursAgo', { n: diffHour })
+    if (diffDay < 7) return t('history.daysAgo', { n: diffDay })
+    return date.toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US')
   }
 
   return (
@@ -92,12 +95,12 @@ export function HistoryPage() {
       <div className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-6 h-14 flex items-center gap-3">
           <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4" /> 返回
+            <ArrowLeft className="w-4 h-4" /> {t('history.back')}
           </Button>
           <div className="w-px h-5 bg-border" />
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-gold" />
-            <span className="text-sm font-medium">历史记录</span>
+            <span className="text-sm font-medium">{t('history.title')}</span>
           </div>
         </div>
       </div>
@@ -115,7 +118,7 @@ export function HistoryPage() {
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              对话记录
+              {t('history.tabConversations')}
               <span className="text-xs text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-full">
                 {conversations.length}
               </span>
@@ -129,10 +132,10 @@ export function HistoryPage() {
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              我的文章
+              {t('history.tabArticles')}
               {drafts.length > 0 && (
                 <span className="text-xs text-gold bg-gold/10 px-1.5 py-0.5 rounded-full">
-                  {drafts.length} 草稿
+                  {drafts.length} {t('history.drafts')}
                 </span>
               )}
             </button>
@@ -174,14 +177,16 @@ function ConversationsTab({
   formatTime: (d: string) => string
   navigate: ReturnType<typeof useNavigate>
 }) {
+  const t = useT()
+
   if (conversations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh]">
         <MessageSquare className="w-12 h-12 text-muted-foreground/30 mb-4" />
-        <h3 className="text-lg font-medium text-muted-foreground mb-2">还没有对话记录</h3>
-        <p className="text-sm text-muted-foreground/60 mb-6">开始一段新对话，你的对话历史会自动保存在这里</p>
+        <h3 className="text-lg font-medium text-muted-foreground mb-2">{t('history.conversations.empty.title')}</h3>
+        <p className="text-sm text-muted-foreground/60 mb-6">{t('history.conversations.empty.desc')}</p>
         <Button variant="gold" onClick={() => navigate('/chat')}>
-          开始新对话
+          {t('history.conversations.empty.cta')}
         </Button>
       </div>
     )
@@ -190,7 +195,7 @@ function ConversationsTab({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-serif font-bold">共 {conversations.length} 条对话</h2>
+        <h2 className="text-lg font-serif font-bold">{t('history.conversations.count', { n: conversations.length })}</h2>
       </div>
 
       {conversations.map(conv => (
@@ -208,7 +213,7 @@ function ConversationsTab({
                 </span>
               </div>
               <p className="text-xs text-muted-foreground truncate">
-                {conv.messages.length} 条消息 · {conv.preview}
+                {t('history.conversations.messages', { n: conv.messages.length })} · {conv.preview}
               </p>
             </div>
             <Button
@@ -236,14 +241,16 @@ function DraftsTab({
   formatTime: (d: string) => string
   navigate: ReturnType<typeof useNavigate>
 }) {
+  const t = useT()
+
   if (!isAuthenticated()) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh]">
         <FileText className="w-12 h-12 text-muted-foreground/30 mb-4" />
-        <h3 className="text-lg font-medium text-muted-foreground mb-2">请先登录</h3>
-        <p className="text-sm text-muted-foreground/60 mb-6">登录后可以查看和管理你的文章</p>
+        <h3 className="text-lg font-medium text-muted-foreground mb-2">{t('history.drafts.loginRequired.title')}</h3>
+        <p className="text-sm text-muted-foreground/60 mb-6">{t('history.drafts.loginRequired.desc')}</p>
         <Button variant="gold" onClick={() => navigate('/auth')}>
-          去登录
+          {t('history.drafts.loginRequired.cta')}
         </Button>
       </div>
     )
@@ -261,10 +268,10 @@ function DraftsTab({
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh]">
         <FileText className="w-12 h-12 text-muted-foreground/30 mb-4" />
-        <h3 className="text-lg font-medium text-muted-foreground mb-2">还没有文章</h3>
-        <p className="text-sm text-muted-foreground/60 mb-6">通过对话生成文章后，会出现在这里</p>
+        <h3 className="text-lg font-medium text-muted-foreground mb-2">{t('history.drafts.empty.title')}</h3>
+        <p className="text-sm text-muted-foreground/60 mb-6">{t('history.drafts.empty.desc')}</p>
         <Button variant="gold" onClick={() => navigate('/chat')}>
-          开始对话
+          {t('history.drafts.empty.cta')}
         </Button>
       </div>
     )
@@ -277,7 +284,7 @@ function DraftsTab({
         <div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-1 h-5 bg-amber-400 rounded-full" />
-            <h3 className="text-base font-serif font-bold">草稿 / 待发布</h3>
+            <h3 className="text-base font-serif font-bold">{t('history.drafts.sectionTitle')}</h3>
             <span className="text-xs text-muted-foreground">({drafts.length})</span>
           </div>
           <div className="space-y-3">
@@ -290,13 +297,13 @@ function DraftsTab({
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/article/${article.id}`)}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 font-medium">
-                        {article.status === 'generated' ? '已生成' : '草稿'}
+                        {article.status === 'generated' ? t('history.drafts.statusGenerated') : t('history.drafts.statusDraft')}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatTime(article.created_at)}
                       </span>
                     </div>
-                    <h4 className="text-sm font-medium truncate">{article.title || '无标题'}</h4>
+                    <h4 className="text-sm font-medium truncate">{article.title || t('history.noTitle')}</h4>
                     {article.subtitle && (
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{article.subtitle}</p>
                     )}
@@ -307,7 +314,7 @@ function DraftsTab({
                     className="gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => onPublish(article.id)}
                   >
-                    <Send className="w-3 h-3" /> 发布
+                    <Send className="w-3 h-3" /> {t('history.drafts.publish')}
                   </Button>
                 </div>
               </div>
@@ -321,7 +328,7 @@ function DraftsTab({
         <div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-1 h-5 bg-emerald-400 rounded-full" />
-            <h3 className="text-base font-serif font-bold">已发布</h3>
+            <h3 className="text-base font-serif font-bold">{t('history.published.sectionTitle')}</h3>
             <span className="text-xs text-muted-foreground">({published.length})</span>
           </div>
           <div className="space-y-3">
@@ -335,13 +342,13 @@ function DraftsTab({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 font-medium">
-                        已发布
+                        {t('history.published.status')}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatTime(article.published_at || article.created_at)}
                       </span>
                     </div>
-                    <h4 className="text-sm font-medium truncate">{article.title || '无标题'}</h4>
+                    <h4 className="text-sm font-medium truncate">{article.title || t('history.noTitle')}</h4>
                     {article.subtitle && (
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{article.subtitle}</p>
                     )}

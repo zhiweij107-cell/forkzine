@@ -6,6 +6,7 @@ import {
   Search, Sparkles, MessageSquare, Eye, GitFork,
   Loader2, TrendingUp, Users
 } from 'lucide-react'
+import { useT } from '@/lib/i18n'
 
 interface Topic {
   id: string
@@ -29,6 +30,7 @@ interface ArticleItem {
 }
 
 export function ExplorePage() {
+  const t = useT()
   const [topics, setTopics] = useState<Topic[]>([])
   const [articles, setArticles] = useState<ArticleItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,8 +66,8 @@ export function ExplorePage() {
       {/* Hero */}
       <section className="py-16 px-6 border-b border-border">
         <div className="container mx-auto max-w-4xl text-center">
-          <h1 className="text-4xl font-serif font-bold mb-4">发现</h1>
-          <p className="text-muted-foreground mb-8">探索热门话题，发现精彩观点</p>
+          <h1 className="text-4xl font-serif font-bold mb-4">{t('explore.title')}</h1>
+          <p className="text-muted-foreground mb-8">{t('explore.subtitle')}</p>
 
           {/* Search */}
           <div className="relative max-w-md mx-auto">
@@ -74,7 +76,7 @@ export function ExplorePage() {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="搜索话题..."
+              placeholder={t('explore.searchPlaceholder')}
               className="w-full pl-11 pr-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/50"
             />
           </div>
@@ -86,7 +88,7 @@ export function ExplorePage() {
         <div className="mb-16">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-1 h-6 bg-gold rounded-full" />
-            <h2 className="text-2xl font-serif font-bold">热门话题</h2>
+            <h2 className="text-2xl font-serif font-bold">{t('explore.hotTopics')}</h2>
             <span className="text-sm text-muted-foreground">({filteredTopics.length})</span>
           </div>
 
@@ -112,10 +114,10 @@ export function ExplorePage() {
           {filteredTopics.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground">还没有话题</p>
+              <p className="text-muted-foreground">{t('explore.noTopics')}</p>
               <Link to="/chat">
                 <Button variant="gold" size="sm" className="mt-4 gap-2">
-                  <Sparkles className="w-3.5 h-3.5" /> 开始第一个话题
+                  <Sparkles className="w-3.5 h-3.5" /> {t('explore.startFirst')}
                 </Button>
               </Link>
             </div>
@@ -139,11 +141,11 @@ export function ExplorePage() {
                     {topic.title}
                   </h3>
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
-                    {topic.description || '点击开始讨论这个话题'}
+                    {topic.description || t('explore.clickToDiscuss')}
                   </p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3" /> {topic.interview_count} 篇访谈
+                      <Users className="w-3 h-3" /> {t('explore.interviewCount', { n: topic.interview_count })}
                     </span>
                   </div>
                 </div>
@@ -156,13 +158,13 @@ export function ExplorePage() {
         <div>
           <div className="flex items-center gap-3 mb-8">
             <div className="w-1 h-6 bg-gold rounded-full" />
-            <h2 className="text-2xl font-serif font-bold">最新文章</h2>
+            <h2 className="text-2xl font-serif font-bold">{t('explore.latestArticles')}</h2>
           </div>
 
           {articles.length === 0 ? (
             <div className="text-center py-12">
               <Sparkles className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground">还没有发布的文章</p>
+              <p className="text-muted-foreground">{t('explore.noArticles')}</p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
@@ -179,7 +181,7 @@ export function ExplorePage() {
                   <p className="text-xs text-foreground/60 line-clamp-2 mb-3">{article.summary}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
-                      {article.profiles?.name || '匿名'}
+                      {article.profiles?.name || t('explore.anonymous')}
                     </span>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">

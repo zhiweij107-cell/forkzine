@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Sparkles, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react'
 import { login, register } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 
 export function AuthPage() {
+  const t = useT()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -23,15 +25,15 @@ export function AuthPage() {
     try {
       if (mode === 'register') {
         await register(email, password, name)
-        setSuccess('注册成功！正在跳转...')
+        setSuccess(t('auth.registerSuccess'))
         setTimeout(() => navigate('/'), 1000)
       } else {
         await login(email, password)
-        setSuccess('登录成功！正在跳转...')
+        setSuccess(t('auth.loginSuccess'))
         setTimeout(() => navigate('/'), 500)
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '操作失败，请重试'
+      const message = err instanceof Error ? err.message : t('auth.operationFailed')
       setError(message)
     } finally {
       setLoading(false)
@@ -56,11 +58,10 @@ export function AuthPage() {
             <span className="font-serif font-bold text-2xl text-primary-foreground">Forkzine</span>
           </div>
           <h2 className="text-3xl font-serif font-bold text-primary-foreground mb-4">
-            对话即创作<br />观点即分叉
+            {t('auth.heroTitle1')}<br />{t('auth.heroTitle2')}
           </h2>
           <p className="text-primary-foreground/60 leading-relaxed">
-            与 AI 深度对话，自动生成精美杂志访谈文章。
-            在任意观点处创建分支，让思想在碰撞中生长。
+            {t('auth.heroDesc')}
           </p>
         </div>
       </div>
@@ -77,10 +78,10 @@ export function AuthPage() {
           </div>
 
           <h1 className="text-2xl font-serif font-bold mb-2">
-            {mode === 'login' ? '欢迎回来' : '创建账号'}
+            {mode === 'login' ? t('auth.title.login') : t('auth.title.register')}
           </h1>
           <p className="text-sm text-muted-foreground mb-8">
-            {mode === 'login' ? '登录以继续你的创作之旅' : '加入 Forkzine，开始你的第一次深度对话'}
+            {mode === 'login' ? t('auth.subtitle.login') : t('auth.subtitle.register')}
           </p>
 
           {error && (
@@ -103,7 +104,7 @@ export function AuthPage() {
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  placeholder="你的笔名"
+                  placeholder={t('auth.namePlaceholder')}
                   className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/50 transition-all"
                 />
               </div>
@@ -115,7 +116,7 @@ export function AuthPage() {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="邮箱地址"
+                placeholder={t('auth.emailPlaceholder')}
                 required
                 className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/50 transition-all"
               />
@@ -127,7 +128,7 @@ export function AuthPage() {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="密码（至少6位）"
+                placeholder={t('auth.passwordPlaceholder')}
                 required
                 minLength={6}
                 className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/50 transition-all"
@@ -139,7 +140,7 @@ export function AuthPage() {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  {mode === 'login' ? '登录' : '注册'}
+                  {mode === 'login' ? t('auth.loginBtn') : t('auth.registerBtn')}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -152,7 +153,7 @@ export function AuthPage() {
               <div className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-background px-3 text-muted-foreground">或</span>
+              <span className="bg-background px-3 text-muted-foreground">{t('auth.or')}</span>
             </div>
           </div>
 
@@ -163,22 +164,22 @@ export function AuthPage() {
             onClick={() => navigate('/chat')}
           >
             <Sparkles className="w-4 h-4 text-gold" />
-            快速体验（免注册）
+            {t('auth.quickAccess')}
           </Button>
 
           {/* Switch mode */}
           <p className="text-center text-sm text-muted-foreground mt-6">
             {mode === 'login' ? (
-              <>还没有账号？ <button onClick={() => { setMode('register'); setError('') }} className="text-gold font-medium hover:underline">立即注册</button></>
+              <>{t('auth.noAccount')} <button onClick={() => { setMode('register'); setError('') }} className="text-gold font-medium hover:underline">{t('auth.registerNow')}</button></>
             ) : (
-              <>已有账号？ <button onClick={() => { setMode('login'); setError('') }} className="text-gold font-medium hover:underline">登录</button></>
+              <>{t('auth.hasAccount')} <button onClick={() => { setMode('login'); setError('') }} className="text-gold font-medium hover:underline">{t('auth.loginNow')}</button></>
             )}
           </p>
 
           {/* Back to home */}
           <div className="text-center mt-4">
             <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">
-              返回首页
+              {t('auth.backHome')}
             </Link>
           </div>
         </div>

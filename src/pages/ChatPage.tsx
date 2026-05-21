@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Send, Sparkles, Wand2, BookOpen } from 'lucide-react'
 import { sendMessage } from '@/lib/api'
 import { saveConversation, generateConversationId, type ConversationRecord } from '@/lib/conversations'
+import { useT } from '@/lib/i18n'
 
 interface ChatMessage {
   id: string
@@ -12,16 +13,17 @@ interface ChatMessage {
   timestamp: Date
 }
 
-const SUGGESTED_TOPICS = [
-  'AI 会取代人类创作吗？',
-  '远程工作的真相',
-  '社交媒体与亲密关系',
-  '独处的艺术',
-]
-
 export function ChatPage() {
+  const t = useT()
   const location = useLocation()
   const navigate = useNavigate()
+
+  const SUGGESTED_TOPICS = [
+    t('chat.topic1'),
+    t('chat.topic2'),
+    t('chat.topic3'),
+    t('chat.topic4'),
+  ]
 
   // Extract restore state at initialization (not in effect) to avoid race conditions
   const restoredConv = (location.state as { restore?: ConversationRecord } | null)?.restore
@@ -51,7 +53,7 @@ export function ChatPage() {
     if (messages.length >= 2 && hasDirtyMessages.current) {
       saveConversation({
         id: conversationId,
-        topicTitle: topicTitle || '自由对话',
+        topicTitle: topicTitle || t('chat.freeChat'),
         messages: messages.map(m => ({
           role: m.role === 'user' ? 'user' : 'assistant',
           content: m.content,
@@ -61,7 +63,7 @@ export function ChatPage() {
         preview: messages[messages.length - 1]?.content.slice(0, 80) || '',
       })
     }
-  }, [messages, conversationId, topicTitle])
+  }, [messages, conversationId, topicTitle, t])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -112,10 +114,10 @@ export function ChatPage() {
       )
     } catch (error) {
       // On error, show error message in the AI bubble
-      const errMsg = error instanceof Error ? error.message : '连接失败，请稍后重试'
+      const errMsg = error instanceof Error ? error.message : t('chat.error.connectionFailed')
       setMessages(prev =>
         prev.map(m =>
-          m.id === aiMsgId ? { ...m, content: `[错误] ${errMsg}` } : m
+          m.id === aiMsgId ? { ...m, content: `[${t('chat.error.prefix')}] ${errMsg}` } : m
         )
       )
     } finally {
@@ -145,14 +147,14 @@ export function ChatPage() {
           <div className="flex items-center gap-3">
             <Link to="/">
               <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground">
-                <ArrowLeft className="w-4 h-4" /> 返回
+                <ArrowLeft className="w-4 h-4" /> {t('chat.back')}
               </Button>
             </Link>
             <div className="w-px h-5 bg-border" />
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-gold" />
               <span className="text-sm font-medium">
-                {topicTitle || '新的对话'}
+                {topicTitle || t('chat.newChat')}
               </span>
             </div>
           </div>
@@ -173,7 +175,7 @@ export function ChatPage() {
               })}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              生成杂志文章
+              {t('chat.generateArticle')}
             </Button>
           )}
         </div>
@@ -182,7 +184,7 @@ export function ChatPage() {
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto">
         {!chatStarted ? (
-          <ChatWelcome onSelectTopic={startWithTopic} />
+          <ChatWelcome onSelectTopic={startWithTopic} topics={SUGGESTED_TOPICS} />
         ) : (
           <div className="container mx-auto px-6 py-8 max-w-3xl">
             {messages.map(msg => (
@@ -219,7 +221,7 @@ export function ChatPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="分享你的想法，开始一段深度对话..."
+                placeholder={t('chat.placeholder')}
                 className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 pr-12 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/50 transition-all min-h-[48px] max-h-[160px]"
                 rows={1}
                 onInput={e => {
@@ -240,7 +242,7 @@ export function ChatPage() {
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground mt-2 text-center">
-            对话结束后可一键生成杂志风格访谈文章
+            {t('chat.hint')}
           </p>
         </div>
       </div>
@@ -248,21 +250,21 @@ export function ChatPage() {
   )
 }
 
-function ChatWelcome({ onSelectTopic }: { onSelectTopic: (topic: string) => void }) {
+function ChatWelcome({ onSelectTopic, topics }: { onSelectTopic: (topic: string) => void; topics: string[] }) {
+  const t = useT()
   return (
     <div className="flex-1 flex items-center justify-center min-h-[60vh]">
       <div className="text-center max-w-lg px-6">
         <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center">
           <Wand2 className="w-7 h-7 text-gold" />
         </div>
-        <h2 className="text-2xl font-serif font-bold mb-3">开始一段有深度的对话</h2>
+        <h2 className="text-2xl font-serif font-bold mb-3">{t('chat.welcome.title')}</h2>
         <p className="text-muted-foreground leading-relaxed mb-8">
-          选择一个话题或自由输入，AI 将作为你的对话伙伴，
-          引导你深入探讨。对话结束后可自动生成杂志风格的访谈文章。
+          {t('chat.welcome.desc')}
         </p>
 
         <div className="grid grid-cols-2 gap-3">
-          {SUGGESTED_TOPICS.map(topic => (
+          {topics.map(topic => (
             <button
               key={topic}
               onClick={() => onSelectTopic(topic)}
@@ -280,6 +282,7 @@ function ChatWelcome({ onSelectTopic }: { onSelectTopic: (topic: string) => void
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {
+  const t = useT()
   const isUser = message.role === 'user'
 
   if (!isUser && !message.content) return null
@@ -293,7 +296,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           : 'bg-gold/10 border border-gold/20'
       }`}>
         {isUser ? (
-          <span className="text-xs font-medium text-primary-foreground">我</span>
+          <span className="text-xs font-medium text-primary-foreground">{t('chat.me')}</span>
         ) : (
           <Sparkles className="w-3.5 h-3.5 text-gold" />
         )}
