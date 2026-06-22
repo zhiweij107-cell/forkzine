@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { getArticle, updateArticle, getCurrentUser, uploadImage, translateArticle, deleteArticle } from '@/lib/api'
+import { getArticle, updateArticle, getCurrentUser, uploadImage, translateArticle, deleteArticle, getMe, isAuthenticated } from '@/lib/api'
 import {
   ArrowLeft, GitFork, Eye, Heart, Share2, Bookmark,
   MessageSquarePlus, AlertCircle, Loader2, Pencil, Save, X, Upload, Languages, Trash2
@@ -73,6 +73,14 @@ export function ArticlePage() {
     getArticle(id)
       .then(data => {
         setArticle(data)
+        // If server didn't detect ownership but user is logged in, double-check via /auth/me
+        if (!data.isOwner && isAuthenticated()) {
+          getMe().then(me => {
+            if (me && (me.id === data.creator_id || me.id === data.profiles?.id)) {
+              setArticle({ ...data, isOwner: true })
+            }
+          }).catch(() => {})
+        }
       })
       .catch(() => {
         setNotFound(true)

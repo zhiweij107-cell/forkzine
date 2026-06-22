@@ -236,10 +236,14 @@ articleRouter.get('/:id', optionalAuth, async (req: AuthenticatedRequest, res) =
   // Increment read count
   await supabaseAdmin.rpc('increment_read_count', { interview_id: id })
 
-  // Attach ownership flag
-  const isOwner = !!(req.userId && interview.creator_id === req.userId)
+  // Supabase replaces creator_id with the joined profiles object,
+  // so we need to extract the real creator_id from profiles.id
+  const realCreatorId = interview.profiles?.id || interview.creator_id
+  const isOwner = !!(req.userId && realCreatorId === req.userId)
 
-  res.json({ ...interview, isOwner })
+  console.log(`[Article ${id}] realCreatorId=${realCreatorId}, req.userId=${req.userId}, isOwner=${isOwner}`)
+
+  res.json({ ...interview, creator_id: realCreatorId, isOwner })
 })
 
 /**
