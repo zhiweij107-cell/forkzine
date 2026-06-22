@@ -83,6 +83,13 @@ export const en: Record<string, string> = {
   'article.lightChat': 'Light Chat',
   'article.debateStyle': 'Debate',
   'article.branches': 'branches',
+  'article.translate': 'Translate',
+  'article.translating': 'Translating...',
+  'article.showOriginal': 'Show Original',
+  'article.translateFailed': 'Translation failed: {msg}',
+  'article.delete': 'Delete',
+  'article.deleteConfirm': 'Are you sure you want to delete this article? This action cannot be undone.',
+  'article.deleteFailed': 'Delete failed: {msg}',
 
   // Generate Page
   'generate.back': 'Back to Chat',

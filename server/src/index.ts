@@ -40,4 +40,22 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 app.listen(PORT, () => {
   console.log(`[Forkzine Server] Running on http://localhost:${PORT}`)
   console.log(`[Forkzine Server] CORS origin: ${process.env.CORS_ORIGIN}`)
+
+  // Keep-alive: ping self every 14 minutes to prevent Render free tier from sleeping
+  const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL
+    ? `${process.env.RENDER_EXTERNAL_URL}/api/health`
+    : null
+
+  if (KEEP_ALIVE_URL) {
+    const INTERVAL_MS = 14 * 60 * 1000 // 14 minutes
+    setInterval(async () => {
+      try {
+        const res = await fetch(KEEP_ALIVE_URL)
+        console.log(`[Keep-Alive] Pinged ${KEEP_ALIVE_URL} — ${res.status}`)
+      } catch (err: any) {
+        console.warn(`[Keep-Alive] Failed to ping: ${err.message}`)
+      }
+    }, INTERVAL_MS)
+    console.log(`[Keep-Alive] Scheduled every 14min → ${KEEP_ALIVE_URL}`)
+  }
 })

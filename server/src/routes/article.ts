@@ -1,5 +1,5 @@
 import { Router, Response } from 'express'
-import { generateArticleFromChat, type ChatMessage } from '../lib/openai.js'
+import { generateArticleFromChat, generateCompletion, type ChatMessage } from '../lib/openai.js'
 import { requireAuth, optionalAuth, type AuthenticatedRequest } from '../middleware/auth.js'
 import { supabaseAdmin } from '../lib/supabase.js'
 import { submitImageTask } from '../lib/midjourney.js'
@@ -350,6 +350,150 @@ articleRouter.post('/publish-direct', requireAuth, async (req: AuthenticatedRequ
     res.json({ id: interview.id, status: 'published' })
   } catch (error: any) {
     const message = error instanceof Error ? error.message : 'Publish failed'
+    res.status(500).json({ error: message })
+  }
+})
+
+/**
+ * DELETE /api/articles/:id
+ * Delete an article (only the owner can delete)
+ */
+articleRouter.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params
+
+  // Verify ownership
+  const { data: existing } = await supabaseAdmin
+    .from('interviews')
+    .select('id')
+    .eq('id', id)
+    .eq('creator_id', req.userId)
+    .single()
+
+  if (!existing) {
+    res.status(404).json({ error: 'Article not found or not authorized' })
+    return
+  }
+
+  // Delete sections first (foreign key dependency)
+  await supabaseAdmin
+    .from('sections')
+    .delete()
+    .eq('interview_id', id)
+
+  // Delete the article
+  const { error } = await supabaseAdmin
+    .from('interviews')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    res.status(500).json({ error: error.message })
+    return
+  }
+
+  res.json({ success: true })
+})
+
+/**
+ * POST /api/articles/:id/translate
+ * Translate an article's content to the specified target language
+ */
+articleRouter.post('/:id/translate', async (req, res) => {
+  const { id } = req.params
+  const { targetLang } = req.body
+
+  if (!targetLang) {
+    res.status(400).json({ error: 'targetLang is required (e.g. "en", "zh", "ja", "ko", "fr")' })
+    return
+  }
+
+  // Fetch the article
+  const { data: interview, error } = await supabaseAdmin
+    .from('interviews')
+    .select(`
+      id, title, subtitle, summary,
+      sections (id, title, content, key_quote, order_index)
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error || !interview) {
+    res.status(404).json({ error: 'Article not found' })
+    return
+  }
+
+  const sections = (interview.sections || []).sort(
+    (a: { order_index: number }, b: { order_index: number }) => a.order_index - b.order_index
+  )
+
+  // Build the content to translate
+  const contentToTranslate = JSON.stringify({
+    title: interview.title,
+    subtitle: interview.subtitle,
+    summary: interview.summary,
+    sections: sections.map((s: { title: string; content: string; key_quote?: string }) => ({
+      title: s.title,
+      content: s.content,
+      key_quote: s.key_quote || '',
+    })),
+  })
+
+  const langNames: Record<string, string> = {
+    en: 'English',
+    zh: '中文',
+    ja: '日本語',
+    ko: '한국어',
+    fr: 'Français',
+    de: 'Deutsch',
+    es: 'Español',
+    pt: 'Português',
+    ru: 'Русский',
+    ar: 'العربية',
+  }
+
+  const targetLangName = langNames[targetLang] || targetLang
+
+  try {
+    const prompt = `You are a professional translator. Translate the following JSON content to ${targetLangName}. 
+Keep the JSON structure exactly the same, only translate the text values. 
+Maintain the tone, style, and meaning of the original text.
+Do NOT translate proper nouns, brand names, or technical terms that are commonly kept in their original form.
+Output ONLY valid JSON, no markdown wrapping, no extra explanation.
+
+Content to translate:
+${contentToTranslate}`
+
+    const result = await generateCompletion([
+      { role: 'system', content: `You are a professional translator specializing in magazine and editorial content. Output only valid JSON.` },
+      { role: 'user', content: prompt },
+    ])
+
+    // Parse the translated JSON
+    const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      res.status(500).json({ error: 'Translation parsing failed' })
+      return
+    }
+
+    const translated = JSON.parse(jsonMatch[0])
+
+    res.json({
+      translated: {
+        title: translated.title,
+        subtitle: translated.subtitle,
+        summary: translated.summary,
+        sections: translated.sections,
+      },
+      targetLang,
+    })
+  } catch (error: any) {
+    const status = error?.status || error?.response?.status
+    if (status === 429) {
+      res.status(429).json({ error: 'AI service is temporarily busy, please try again later', retryable: true })
+      return
+    }
+    const message = error instanceof Error ? error.message : 'Translation failed'
     res.status(500).json({ error: message })
   }
 })

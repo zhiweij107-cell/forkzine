@@ -83,6 +83,13 @@ export const zh: Record<string, string> = {
   'article.lightChat': '轻松漫谈',
   'article.debateStyle': '观点碰撞',
   'article.branches': '分支',
+  'article.translate': '翻译文章',
+  'article.translating': '翻译中...',
+  'article.showOriginal': '查看原文',
+  'article.translateFailed': '翻译失败: {msg}',
+  'article.delete': '删除',
+  'article.deleteConfirm': '确定要删除这篇文章吗？此操作不可恢复。',
+  'article.deleteFailed': '删除失败: {msg}',
 
   // Generate Page
   'generate.back': '返回对话',

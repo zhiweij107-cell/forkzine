@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { getArticle, updateArticle, getCurrentUser, uploadImage } from '@/lib/api'
+import { getArticle, updateArticle, getCurrentUser, uploadImage, translateArticle, deleteArticle } from '@/lib/api'
 import {
   ArrowLeft, GitFork, Eye, Heart, Share2, Bookmark,
-  MessageSquarePlus, AlertCircle, Loader2, Pencil, Save, X, Upload
+  MessageSquarePlus, AlertCircle, Loader2, Pencil, Save, X, Upload, Languages, Trash2
 } from 'lucide-react'
 import { useT, useI18n } from '@/lib/i18n'
 
@@ -47,6 +47,14 @@ export function ArticlePage() {
   const [editData, setEditData] = useState<ArticleData | null>(null)
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
   const [uploadingCover, setUploadingCover] = useState(false)
+  const [translating, setTranslating] = useState(false)
+  const [translatedData, setTranslatedData] = useState<{
+    title: string
+    subtitle: string
+    summary: string
+    sections: { title: string; content: string; key_quote: string }[]
+  } | null>(null)
+  const [showTranslation, setShowTranslation] = useState(false)
 
   const currentUser = getCurrentUser()
   const isOwner = currentUser && article && article.creator_id === currentUser.id
@@ -136,6 +144,48 @@ export function ArticlePage() {
     }
   }
 
+  const handleTranslate = async () => {
+    if (!id) return
+    // Determine target language: if user locale matches article language, translate to the "other" language
+    // Simple heuristic: detect if article is primarily Chinese or not
+    const articleText = article?.title || ''
+    const isChinese = /[\u4e00-\u9fff]/.test(articleText)
+    const targetLang = isChinese && locale === 'en' ? 'en'
+      : !isChinese && locale === 'zh' ? 'zh'
+      : locale === 'zh' ? 'zh' : 'en'
+
+    setTranslating(true)
+    try {
+      const { translated } = await translateArticle(id, targetLang)
+      setTranslatedData(translated)
+      setShowTranslation(true)
+    } catch (e: any) {
+      alert(t('article.translateFailed', { msg: e.message || t('article.unknownError') }))
+    } finally {
+      setTranslating(false)
+    }
+  }
+
+  const toggleTranslation = () => {
+    if (!translatedData) {
+      handleTranslate()
+    } else {
+      setShowTranslation(!showTranslation)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!id) return
+    const confirmed = window.confirm(t('article.deleteConfirm'))
+    if (!confirmed) return
+    try {
+      await deleteArticle(id)
+      navigate('/')
+    } catch (e: any) {
+      alert(t('article.deleteFailed', { msg: e.message || t('article.unknownError') }))
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen pt-16 flex items-center justify-center">
@@ -161,6 +211,17 @@ export function ArticlePage() {
 
   const displayData = editing ? editData! : article
 
+  // Build translated display data if translation is active
+  const displayTitle = showTranslation && translatedData ? translatedData.title : displayData.title
+  const displaySubtitle = showTranslation && translatedData ? translatedData.subtitle : displayData.subtitle
+  const displaySummary = showTranslation && translatedData ? translatedData.summary : displayData.summary
+  const getTranslatedSection = (idx: number) => {
+    if (showTranslation && translatedData && translatedData.sections[idx]) {
+      return translatedData.sections[idx]
+    }
+    return null
+  }
+
   return (
     <article className="pt-16">
       {/* Cover */}
@@ -168,6 +229,8 @@ export function ArticlePage() {
         article={displayData}
         editing={editing}
         locale={locale}
+        translatedTitle={showTranslation && translatedData ? translatedData.title : undefined}
+        translatedSubtitle={showTranslation && translatedData ? translatedData.subtitle : undefined}
         onUpdate={editing ? (field, value) => setEditData({ ...editData!, [field]: value }) : undefined}
         onCoverUpload={editing ? handleCoverUpload : undefined}
         uploadingCover={uploadingCover}
@@ -195,9 +258,14 @@ export function ArticlePage() {
             ) : (
               <>
                 <span className="text-xs text-muted-foreground">{t('article.ownerHint')}</span>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={startEditing}>
-                  <Pencil className="w-3.5 h-3.5" /> {t('article.edit')}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-red-400 hover:text-red-300 hover:border-red-400/50" onClick={handleDelete}>
+                    <Trash2 className="w-3.5 h-3.5" /> {t('article.delete')}
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={startEditing}>
+                    <Pencil className="w-3.5 h-3.5" /> {t('article.edit')}
+                  </Button>
+                </div>
               </>
             )}
           </div>
@@ -207,6 +275,31 @@ export function ArticlePage() {
       {/* Article body */}
       <div className="container mx-auto px-6 py-16">
         <div className="max-w-3xl mx-auto">
+          {/* Translate button */}
+          {!editing && (
+            <div className="flex justify-end mb-6">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={toggleTranslation}
+                disabled={translating}
+              >
+                {translating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Languages className="w-4 h-4" />
+                )}
+                {translating
+                  ? t('article.translating')
+                  : showTranslation
+                    ? t('article.showOriginal')
+                    : t('article.translate')
+                }
+              </Button>
+            </div>
+          )}
+
           {/* Summary */}
           <div className="mb-16 pb-8 border-b border-border">
             {editing ? (
@@ -218,7 +311,7 @@ export function ArticlePage() {
               />
             ) : (
               <p className="text-lg leading-relaxed text-foreground/80">
-                {displayData.summary}
+                {displaySummary}
               </p>
             )}
           </div>
@@ -226,7 +319,13 @@ export function ArticlePage() {
           {/* Sections */}
           {displayData.sections
             .sort((a, b) => a.order_index - b.order_index)
-            .map((section, idx) => (
+            .map((section, idx) => {
+            const translated = getTranslatedSection(idx)
+            const sectionTitle = translated ? translated.title : section.title
+            const sectionContent = translated ? translated.content : section.content
+            const sectionQuote = translated ? translated.key_quote : section.key_quote
+
+            return (
             <section key={section.id || idx} className="mb-16 animate-fade-in" style={{ animationDelay: `${idx * 0.1}s` }}>
               {/* Section header */}
               {editing ? (
@@ -237,7 +336,7 @@ export function ArticlePage() {
                   className="w-full text-2xl font-serif font-bold bg-transparent border-b border-border pb-2 mb-6 focus:outline-none focus:border-gold/50"
                 />
               ) : (
-                <h2 className="text-2xl font-serif font-bold mag-header mb-6">{section.title}</h2>
+                <h2 className="text-2xl font-serif font-bold mag-header mb-6">{sectionTitle}</h2>
               )}
 
               {/* Key quote */}
@@ -252,9 +351,9 @@ export function ArticlePage() {
                     className="w-full text-sm bg-transparent border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold/30 italic"
                   />
                 </div>
-              ) : section.key_quote ? (
+              ) : sectionQuote ? (
                 <blockquote className="pull-quote my-8">
-                  {section.key_quote}
+                  {sectionQuote}
                 </blockquote>
               ) : null}
 
@@ -269,7 +368,7 @@ export function ArticlePage() {
               ) : (
                 <div className="prose prose-lg max-w-none">
                   <p className="text-foreground/80 leading-[1.8] text-base whitespace-pre-wrap">
-                    {section.content}
+                    {sectionContent}
                   </p>
                 </div>
               )}
@@ -349,7 +448,8 @@ export function ArticlePage() {
                 </div>
               ) : null}
             </section>
-          ))}
+            )
+          })}
 
           {/* End mark */}
           <div className="section-divider">
@@ -381,10 +481,12 @@ export function ArticlePage() {
   )
 }
 
-function ArticleCover({ article, editing, locale, onUpdate, onCoverUpload, uploadingCover }: {
+function ArticleCover({ article, editing, locale, translatedTitle, translatedSubtitle, onUpdate, onCoverUpload, uploadingCover }: {
   article: ArticleData
   editing?: boolean
   locale: string
+  translatedTitle?: string
+  translatedSubtitle?: string
   onUpdate?: (field: string, value: string) => void
   onCoverUpload?: (file: File) => void
   uploadingCover?: boolean
@@ -488,10 +590,10 @@ function ArticleCover({ article, editing, locale, onUpdate, onCoverUpload, uploa
           ) : (
             <>
               <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary-foreground leading-tight mb-3">
-                {article.title}
+                {translatedTitle || article.title}
               </h1>
               <p className="text-xl text-primary-foreground/60 font-serif italic mb-8">
-                {article.subtitle}
+                {translatedSubtitle || article.subtitle}
               </p>
             </>
           )}

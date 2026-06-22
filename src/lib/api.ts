@@ -224,6 +224,25 @@ export async function listMyArticles(status?: string) {
   return data
 }
 
+export async function translateArticle(articleId: string, targetLang: string) {
+  const res = await apiFetch(`/articles/${articleId}/translate`, {
+    method: 'POST',
+    body: JSON.stringify({ targetLang }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error)
+  return data
+}
+
+export async function deleteArticle(articleId: string) {
+  const res = await apiFetch(`/articles/${articleId}`, {
+    method: 'DELETE',
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error)
+  return data
+}
+
 // ========== Branches ==========
 
 export async function createBranch(
