@@ -57,7 +57,9 @@ export function ArticlePage() {
   const [showTranslation, setShowTranslation] = useState(false)
 
   const currentUser = getCurrentUser()
-  const isOwner = currentUser && article && article.creator_id === currentUser.id
+  const isOwner = currentUser && article && (
+    article.creator_id === currentUser.id || article.profiles?.id === currentUser.id
+  )
 
   useEffect(() => {
     if (!id) {
