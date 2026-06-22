@@ -208,7 +208,7 @@ articleRouter.get('/my-articles', requireAuth, async (req: AuthenticatedRequest,
  * GET /api/articles/:id
  * Get a published article with its sections and branches
  */
-articleRouter.get('/:id', async (req, res) => {
+articleRouter.get('/:id', optionalAuth, async (req: AuthenticatedRequest, res) => {
   const { id } = req.params
 
   // Fetch interview
@@ -236,7 +236,10 @@ articleRouter.get('/:id', async (req, res) => {
   // Increment read count
   await supabaseAdmin.rpc('increment_read_count', { interview_id: id })
 
-  res.json(interview)
+  // Attach ownership flag
+  const isOwner = !!(req.userId && interview.creator_id === req.userId)
+
+  res.json({ ...interview, isOwner })
 })
 
 /**

@@ -30,6 +30,7 @@ interface ArticleData {
   published_at: string
   creator_id: string
   cover_gradient: string
+  isOwner?: boolean
   profiles: { id: string; name: string; title?: string; avatar_url?: string }
   sections: SectionData[]
 }
@@ -57,8 +58,10 @@ export function ArticlePage() {
   const [showTranslation, setShowTranslation] = useState(false)
 
   const currentUser = getCurrentUser()
-  const isOwner = currentUser && article && (
-    article.creator_id === currentUser.id || article.profiles?.id === currentUser.id
+  const isOwner = article?.isOwner || (
+    currentUser && article && (
+      article.creator_id === currentUser.id || article.profiles?.id === currentUser.id
+    )
   )
 
   useEffect(() => {
