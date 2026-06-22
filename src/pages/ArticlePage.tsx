@@ -272,7 +272,7 @@ export function ArticlePage() {
               <>
                 <span className="text-xs text-muted-foreground">{t('article.ownerHint')}</span>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="gap-1.5 text-red-400 hover:text-red-300 hover:border-red-400/50" onClick={handleDelete}>
+                  <Button variant="ghost" size="sm" className="gap-1.5 !text-red-400 hover:!text-red-300 hover:bg-red-400/10" onClick={handleDelete}>
                     <Trash2 className="w-3.5 h-3.5" /> {t('article.delete')}
                   </Button>
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={startEditing}>
