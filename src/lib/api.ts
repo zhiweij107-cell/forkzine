@@ -186,6 +186,10 @@ export async function publishArticleDirect(article: {
 }
 
 export async function getArticle(articleId: string) {
+  // Ensure token is fresh so server-side optionalAuth can identify the user
+  if (getAccessToken()) {
+    await refreshToken()
+  }
   const res = await apiFetch(`/articles/${articleId}`)
   const data = await res.json()
   if (!res.ok) throw new Error(data.error)
