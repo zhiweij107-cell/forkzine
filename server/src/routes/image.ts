@@ -91,24 +91,6 @@ imageRouter.post('/upload', requireAuth, upload.single('image'), async (req: Aut
 
     console.log(`[Upload] Attempting upload: ${fileName}, size: ${file.size}, type: ${file.mimetype}`)
 
-    // Ensure bucket exists and is public
-    const { data: buckets } = await supabaseAdmin.storage.listBuckets()
-    const bucket = buckets?.find(b => b.name === 'article-images')
-    if (!bucket) {
-      console.log('[Upload] Creating bucket article-images')
-      const { error: createError } = await supabaseAdmin.storage.createBucket('article-images', {
-        public: true,
-        fileSizeLimit: 10 * 1024 * 1024,
-      })
-      if (createError && !createError.message.includes('already exists')) {
-        res.status(500).json({ error: 'Failed to create bucket: ' + createError.message })
-        return
-      }
-    } else if (!bucket.public) {
-      // Make bucket public if it isn't
-      await supabaseAdmin.storage.updateBucket('article-images', { public: true })
-    }
-
     const { error: uploadError } = await supabaseAdmin.storage
       .from('article-images')
       .upload(fileName, file.buffer, {
