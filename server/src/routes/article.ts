@@ -80,7 +80,8 @@ articleRouter.post('/generate', optionalAuth, async (req: AuthenticatedRequest, 
       return
     }
     const message = error instanceof Error ? error.message : 'Generation failed'
-    res.status(500).json({ error: 'Article generation failed', details: message })
+    console.error('[Article Generate Error]', message, error?.status, error?.code)
+    res.status(500).json({ error: message })
   }
 })
 

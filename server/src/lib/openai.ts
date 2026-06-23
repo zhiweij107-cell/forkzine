@@ -42,13 +42,18 @@ export async function* streamChat(messages: ChatMessage[]) {
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const stream = await openai.chat.completions.create({
+      // Gemini 2.5 thinking models may not support custom temperature via OpenAI-compatible endpoint
+      const params: Record<string, unknown> = {
         model: MODEL,
         messages,
         stream: true,
-        temperature: 0.8,
         max_tokens: 8192,
-      })
+      }
+      if (!MODEL.includes('2.5')) {
+        params.temperature = 0.8
+      }
+
+      const stream = await openai.chat.completions.create(params as any) as any
 
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content
@@ -60,6 +65,7 @@ export async function* streamChat(messages: ChatMessage[]) {
     } catch (error: any) {
       lastError = error
       const status = error?.status || error?.response?.status
+      console.error(`[Gemini] streamChat error: status=${status}, message=${error?.message}`)
       if (status === 429 && attempt < maxRetries) {
         const delay = getRetryDelay(error, attempt)
         console.log(`[Gemini] Rate limited (429) on stream, retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})...`)
@@ -83,16 +89,26 @@ export async function generateCompletion(messages: ChatMessage[]): Promise<strin
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await openai.chat.completions.create({
+      // Gemini 2.5 thinking models may not support custom temperature via OpenAI-compatible endpoint
+      const params: Record<string, unknown> = {
         model: MODEL,
         messages,
-        temperature: 0.7,
         max_tokens: 16384,
-      })
-      return response.choices[0]?.message?.content || ''
+      }
+      if (!MODEL.includes('2.5')) {
+        params.temperature = 0.7
+      }
+
+      const response = await openai.chat.completions.create(params as any)
+      const content = response.choices[0]?.message?.content || ''
+      if (!content) {
+        console.warn(`[Gemini] Empty response from model ${MODEL}`)
+      }
+      return content
     } catch (error: any) {
       lastError = error
       const status = error?.status || error?.response?.status
+      console.error(`[Gemini] generateCompletion error: status=${status}, message=${error?.message}`)
       if (status === 429 && attempt < maxRetries) {
         const delay = getRetryDelay(error, attempt)
         console.log(`[Gemini] Rate limited (429), retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})...`)
