@@ -242,8 +242,6 @@ articleRouter.get('/:id', optionalAuth, async (req: AuthenticatedRequest, res) =
   const realCreatorId = interview.profiles?.id || interview.creator_id
   const isOwner = !!(req.userId && realCreatorId === req.userId)
 
-  console.log(`[Article ${id}] realCreatorId=${realCreatorId}, req.userId=${req.userId}, isOwner=${isOwner}`)
-
   res.json({ ...interview, creator_id: realCreatorId, isOwner })
 })
 
