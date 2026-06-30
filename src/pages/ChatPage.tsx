@@ -26,7 +26,8 @@ export function ChatPage() {
   ]
 
   // Extract restore state at initialization (not in effect) to avoid race conditions
-  const restoredConv = (location.state as { restore?: ConversationRecord } | null)?.restore
+  const restoredConv = (location.state as { restore?: ConversationRecord; topicTitle?: string } | null)?.restore
+  const initialTopicTitle = (location.state as { topicTitle?: string } | null)?.topicTitle
 
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     restoredConv
@@ -38,10 +39,10 @@ export function ChatPage() {
         }))
       : []
   )
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(initialTopicTitle || '')
   const [isTyping, setIsTyping] = useState(false)
-  const [chatStarted, setChatStarted] = useState(!!restoredConv)
-  const [topicTitle, setTopicTitle] = useState<string>(restoredConv?.topicTitle || '')
+  const [chatStarted, setChatStarted] = useState(!!restoredConv || !!initialTopicTitle)
+  const [topicTitle, setTopicTitle] = useState<string>(restoredConv?.topicTitle || initialTopicTitle || '')
   const [conversationId] = useState(() => restoredConv?.id || generateConversationId())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)

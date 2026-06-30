@@ -31,6 +31,21 @@ export const en: Record<string, string> = {
   'home.feed.daysAgo': '{n} days ago',
   'home.feed.coverUploadFail': 'Cover upload failed',
 
+  // Home - Recommended Topics
+  'home.topics.title': 'Recommended Topics',
+  'home.topics.t1': 'Chinese Warhammer 40K: Eastern Grimdark Aesthetics',
+  'home.topics.d1': 'A cosmic worldview blending Confucianism, Taoism and Buddhism in an apocalyptic setting — the fall of the Mandate of Heaven and cyclic empires',
+  'home.topics.t2': 'Mono no Aware: Heian Era Aesthetics',
+  'home.topics.d2': 'The color philosophy of Heian Japan, the sensory world of Tale of Genji, and how "pathos of things" shaped East Asian beauty',
+  'home.topics.t3': 'Body Aesthetics in the Cyborg Age',
+  'home.topics.d3': 'When prosthetic enhancement becomes everyday, is the body still a vessel of beauty? Post-human aesthetics from Ghost in the Shell to Cyberpunk 2077',
+  'home.topics.t4': 'Architectural Philosophy of Fantasy Worlds',
+  'home.topics.d4': 'From Elden Ring\'s Erdtree to Genshin\'s Liyue Harbor — how games use architecture to narrate civilization and faith',
+  'home.topics.t5': 'The Forgotten Silk Road Aesthetics',
+  'home.topics.d5': 'Sogdiana, Gandhara, Khotan — the visual legacy of vanished civilizations along the Silk Road, where East meets West',
+  'home.topics.t6': 'The Sublime in Anime: From EVA to Chainsaw Man',
+  'home.topics.d6': 'Religious iconography, apocalyptic aesthetics and poetics of violence in Japanese animation — how ACG creates its own sublime',
+
   // Home - Footer
   'home.footer.slogan': '© 2026 Forkzine. Conversation is creation, opinions fork.',
 

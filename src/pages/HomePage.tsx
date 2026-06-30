@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, GitFork, Eye, Sparkles, Clock, Flame, Tag, Loader2, Upload } from 'lucide-react'
+import { ArrowRight, GitFork, Eye, Sparkles, Clock, Flame, Tag, Loader2, Upload, MessageSquare } from 'lucide-react'
 import { listArticles, getCurrentUser, uploadImage, updateArticle } from '@/lib/api'
 import { useT, useI18n } from '@/lib/i18n'
 
@@ -25,6 +25,7 @@ export function HomePage() {
   return (
     <div>
       <HeroSection />
+      <RecommendedTopics />
       <ArticleFeed />
       <Footer />
     </div>
@@ -65,6 +66,50 @@ function HeroSection() {
               <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function RecommendedTopics() {
+  const t = useT()
+  const navigate = useNavigate()
+
+  const topics = [
+    { emoji: '🏯', title: t('home.topics.t1'), desc: t('home.topics.d1') },
+    { emoji: '⛩️', title: t('home.topics.t2'), desc: t('home.topics.d2') },
+    { emoji: '🚀', title: t('home.topics.t3'), desc: t('home.topics.d3') },
+    { emoji: '🎭', title: t('home.topics.t4'), desc: t('home.topics.d4') },
+    { emoji: '🌌', title: t('home.topics.t5'), desc: t('home.topics.d5') },
+    { emoji: '🎮', title: t('home.topics.t6'), desc: t('home.topics.d6') },
+  ]
+
+  return (
+    <section className="py-14 px-6 border-b border-border">
+      <div className="container mx-auto max-w-4xl">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-1 h-6 bg-gold rounded-full" />
+          <h2 className="text-2xl font-serif font-bold">{t('home.topics.title')}</h2>
+          <MessageSquare className="w-4 h-4 text-gold" />
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {topics.map((topic, i) => (
+            <button
+              key={i}
+              onClick={() => navigate('/chat', { state: { topicTitle: topic.title } })}
+              className="group p-5 rounded-xl border border-border hover:border-gold/40 bg-card hover:shadow-[var(--shadow-md)] transition-all text-left"
+            >
+              <span className="text-2xl mb-3 block">{topic.emoji}</span>
+              <h3 className="text-sm font-semibold mb-1.5 group-hover:text-gold transition-colors">
+                {topic.title}
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                {topic.desc}
+              </p>
+            </button>
+          ))}
         </div>
       </div>
     </section>

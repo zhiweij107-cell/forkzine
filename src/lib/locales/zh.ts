@@ -31,6 +31,21 @@ export const zh: Record<string, string> = {
   'home.feed.daysAgo': '{n} 天前',
   'home.feed.coverUploadFail': '封面上传失败',
 
+  // Home - Recommended Topics
+  'home.topics.title': '推荐话题',
+  'home.topics.t1': '如果中国有战锤40K：东方暗黑美学',
+  'home.topics.d1': '儒道释三教融合的末世宇宙观，天命崩塌后的轮回帝国，东方式grimdark的美学可能性',
+  'home.topics.t2': '平安时代的物哀与幽玄',
+  'home.topics.d2': '日本平安朝的色彩美学、源氏物语的感官世界，以及「もののあはれ」如何塑造东亚审美意识',
+  'home.topics.t3': '赛博格时代的身体美学',
+  'home.topics.d3': '当义体改造成为日常，人体还是美的容器吗？从攻壳机动队到赛博朋克2077的后人类审美',
+  'home.topics.t4': '架空世界的建筑哲学',
+  'home.topics.d4': '从艾尔登法环的黄金树到原神的璃月港——游戏世界如何用建筑讲述文明与信仰的故事',
+  'home.topics.t5': '被遗忘的丝路美学',
+  'home.topics.d5': '粟特、犍陀罗、于阗——丝绸之路上那些消逝文明的美学遗产，东西方交融的视觉密码',
+  'home.topics.t6': '二次元的崇高感：从EVA到链锯人',
+  'home.topics.d6': '日本动画中的宗教图像学、末世美学与暴力诗学，ACG如何创造属于自己的崇高体验',
+
   // Home - Footer
   'home.footer.slogan': '© 2026 Forkzine. 对话即创作，观点即分叉。',
 
