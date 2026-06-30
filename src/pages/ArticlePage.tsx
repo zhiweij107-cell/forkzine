@@ -225,8 +225,6 @@ export function ArticlePage() {
   const displayData = editing ? editData! : article
 
   // Build translated display data if translation is active
-  const displayTitle = showTranslation && translatedData ? translatedData.title : displayData.title
-  const displaySubtitle = showTranslation && translatedData ? translatedData.subtitle : displayData.subtitle
   const displaySummary = showTranslation && translatedData ? translatedData.summary : displayData.summary
   const getTranslatedSection = (idx: number) => {
     if (showTranslation && translatedData && translatedData.sections[idx]) {
